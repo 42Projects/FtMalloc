@@ -6,7 +6,7 @@
 #    By: nfinkel <nfinkel@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2018/08/25 16:03:14 by nfinkel           #+#    #+#              #
-#    Updated: 2018/08/25 16:52:15 by nfinkel          ###   ########.fr        #
+#    Updated: 2018/08/25 17:03:17 by nfinkel          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -15,10 +15,10 @@
 #################
 
 #	Environment
-OS :=                   $(shell uname)
+OS :=                   $(shell uname -s)
 
 ifeq ($(HOSTTYPE),)
- HOSTTYPE :=            $(shell uname -m)_$(shell uname -s)
+ HOSTTYPE :=            $(shell uname -m)_$(OS)
 endif
 
 #	Output
