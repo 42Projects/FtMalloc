@@ -21,12 +21,12 @@
 # define SMALL
 # define LARGE
 
-bool		g_mutex;
+bool    g_mutex;
 
-extern void	free(void *ptr);
-extern void	*malloc(size_t size);
-extern void	*realloc(void *ptr, size_t size);
-extern void	show_alloc_mem(void);
-extern void	show_alloc_mem_ex(void);
+void    free(void *ptr);
+void    *malloc(size_t size);
+void    *realloc(void *ptr, size_t size);
+void	show_alloc_mem(void);
+void	show_alloc_mem_ex(void);
 
 #endif
