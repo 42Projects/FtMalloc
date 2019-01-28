@@ -6,7 +6,7 @@
 #    By: nfinkel <nfinkel@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2018/08/25 16:03:14 by nfinkel           #+#    #+#              #
-#    Updated: 2019/01/27 11:08:19 by nfinkel          ###   ########.fr        #
+#    Updated: 2019/01/28 21:17:43 by nfinkel          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -15,43 +15,44 @@
 #################
 
 #	Environment
-OS :=                   $(shell uname -s)
+OS :=					$(shell uname -s)
 
 ifeq ($(HOSTTYPE),)
- HOSTTYPE :=            $(shell uname -m)_$(OS)
+	HOSTTYPE :=			$(shell uname -m)_$(OS)
 endif
 
 #	Output
-NAME :=	                libft_malloc_$(HOSTTYPE).so
-SYMLINK :=              libft_malloc.so
+NAME :=					libft_malloc_$(HOSTTYPE).so
+SYMLINK :=				libft_malloc.so
 
 #	Compiler
-CC :=                   gcc
-VERSION :=              -std=c11
+CC :=					gcc
+VERSION :=				-std=c11
 
-FLAGS :=                -Wall -Wextra -Werror
+FLAGS :=				-Wall -Wextra -Werror
 
 ifeq ($(OS), Darwin)
-	THREADS :=          $(shell sysctl -n hw.ncpu)
+	THREADS :=			$(shell sysctl -n hw.ncpu)
 else
-	THREADS :=          4
+	THREADS :=			4
 endif
 
-FAST :=                 -j$(THREADS)
+FAST :=					-j$(THREADS)
 
-DYN_FLAG :=             -shared
-HEADERS :=              -I ./include/
-O_FLAG :=               -O2
+DYN_FLAG :=				-shared
+HEADERS :=				-I ./include/
+O_FLAG :=				-O2
 
 #	Directories
-OBJDIR :=               ./build/
-SRC_DIR :=              ./src/
+LIBFTDIR :=				./libft/
+OBJDIR :=				./build/
+SRC_DIR :=				./src/
 
-SRC +=                  malloc.c realloc.c
+SRC +=					free.c malloc.c realloc.c
 
 #	Sources
-OBJECTS =               $(patsubst %.c,$(OBJDIR)%.o,$(SRCS))
-SRCS +=	                $(SRC)
+OBJECTS =				$(patsubst %.c,$(OBJDIR)%.o,$(SRCS))
+SRCS +=					$(SRC)
 
 vpath %.c $(SRC_DIR)
 
@@ -59,7 +60,7 @@ vpath %.c $(SRC_DIR)
 ##    RULES    ##
 #################
 
-all: $(NAME)
+all: libft $(NAME)
 
 $(NAME): $(OBJECTS)
 	@$(CC) $(VERSION) $(DYN_FLAG) -o $(NAME) $(patsubst %.c,$(OBJDIR)%.o,$(notdir $(SRCS)))
@@ -73,7 +74,7 @@ $(OBJDIR):
 
 $(OBJDIR)%.o: %.c
 	@printf  "\033[1;92mCompiling $(NAME)\033[0m %-28s\033[32m[$<]\033[0m\n" ""
-	@$(CC) $(VERSION) $(FLAGS) $(O_FLAG) $(HEADERS) -fpic -c $< -o $@
+	@$(CC) $(VERSION) $(FLAGS)$(O_FLAG) $(HEADERS) -fpic -c $< -o $@
 	@printf "\033[A\033[2K"
 
 clean:
@@ -88,6 +89,15 @@ fclean: clean
 	@/bin/rm -f $(SYMLINK)
 	@printf  "\033[1;32mCleaning binary -------> \033[91m$(NAME)\033[0m\033[1;32m:\033[0m%-13s\033[32m[✔]\033[0m\n"
 
+libft:
+	@$(MAKE) -C $(LIBFTDIR)
+
+noflags: FLAGS :=
+noflags: re
+
+purge: fclean
+	@$(MAKE) fclean -C $(LIBFTDIR)
+
 re: fclean fast
 
-.PHONY: all clean fast fclean re
+.PHONY: all clean fast fclean libft noflags purge re

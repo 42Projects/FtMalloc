@@ -1,20 +1,19 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   realloc.c                                          :+:      :+:    :+:   */
+/*   dependencies.h                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: nfinkel <nfinkel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2018/08/25 16:51:27 by nfinkel           #+#    #+#             */
-/*   Updated: 2018/08/25 16:51:49 by nfinkel          ###   ########.fr       */
+/*   Created: 2018/01/23 19:04:45 by nfinkel           #+#    #+#             */
+/*   Updated: 2019/01/28 19:13:47 by nfinkel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <malloc.h>
+#ifndef DEPENDENCIES_H
+# define DEPENDENCIES_H
 
-void	*realloc(void *ptr, size_t size)
-{
-	(void)ptr;
-	(void)size;
-	return (NULL);
-}
+# include <stdbool.h>
+# include <unistd.h>
+
+#endif

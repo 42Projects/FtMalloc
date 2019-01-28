@@ -1,20 +1,20 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   realloc.c                                          :+:      :+:    :+:   */
+/*   libft.h                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: nfinkel <nfinkel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2018/08/25 16:51:27 by nfinkel           #+#    #+#             */
-/*   Updated: 2018/08/25 16:51:49 by nfinkel          ###   ########.fr       */
+/*   Created: 2017/08/20 17:50:38 by nfinkel           #+#    #+#             */
+/*   Updated: 2019/01/28 19:13:24 by nfinkel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <malloc.h>
+#ifndef LIBFT_H
+# define LIBFT_H
 
-void	*realloc(void *ptr, size_t size)
-{
-	(void)ptr;
-	(void)size;
-	return (NULL);
-}
+# include "dependencies.h"
+
+# include "libft/api.h"
+
+#endif

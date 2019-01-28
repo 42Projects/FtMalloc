@@ -12,8 +12,15 @@
 
 #include <malloc.h>
 
+void	*ft_malloc(t_malloc g_malloc, size_t size) {
+	if (g_malloc == NULL) {
+		;
+	}
+
+	return (NULL);
+}
+
 void	*malloc(size_t size)
 {
-	(void)size;
-	return NULL;
+	return ft_malloc(NULL, size);
 }
