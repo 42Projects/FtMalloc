@@ -6,7 +6,7 @@
 #    By: nfinkel <nfinkel@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2018/08/25 16:03:14 by nfinkel           #+#    #+#              #
-#    Updated: 2019/01/28 21:17:43 by nfinkel          ###   ########.fr        #
+#    Updated: 2019/01/29 16:20:39 by nfinkel          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -29,16 +29,15 @@ SYMLINK :=				libft_malloc.so
 CC :=					gcc
 VERSION :=				-std=c11
 
-FLAGS :=				-Wall -Wextra -Werror
-
+#	Flags
 ifeq ($(OS), Darwin)
+	FLAGS +=			-Wall -Wextra -Werror 
 	THREADS :=			$(shell sysctl -n hw.ncpu)
 else
 	THREADS :=			4
 endif
 
 FAST :=					-j$(THREADS)
-
 DYN_FLAG :=				-shared
 HEADERS :=				-I ./include/
 O_FLAG :=				-O2
@@ -60,10 +59,11 @@ vpath %.c $(SRC_DIR)
 ##    RULES    ##
 #################
 
-all: libft $(NAME)
+all: $(NAME)
 
+#	@$(CC) $(VERSION) $(DYN_FLAG)$(FLAGS) $(O_FLAG) $(patsubst %.c,$(OBJDIR)%.o,$(notdir $(SRCS))) -L $(LIBFTDIR) -lft -o $@
 $(NAME): $(OBJECTS)
-	@$(CC) $(VERSION) $(DYN_FLAG) -o $(NAME) $(patsubst %.c,$(OBJDIR)%.o,$(notdir $(SRCS)))
+	@$(CC) $(VERSION) $(DYN_FLAG)$(FLAGS) $(O_FLAG) $(patsubst %.c,$(OBJDIR)%.o,$(notdir $(SRCS))) -o $@
 	@printf  "\033[92m\033[1;32mCompiling -------------> \033[91m$(NAME)\033[0m:\033[0m%-13s\033[32m[✔]\033[0m\n"
 	@ln -s $@ $(SYMLINK)
 
@@ -73,8 +73,8 @@ $(OBJDIR):
 	@mkdir -p $@
 
 $(OBJDIR)%.o: %.c
-	@printf  "\033[1;92mCompiling $(NAME)\033[0m %-28s\033[32m[$<]\033[0m\n" ""
-	@$(CC) $(VERSION) $(FLAGS)$(O_FLAG) $(HEADERS) -fpic -c $< -o $@
+	@printf  "\033[1;92mCompiling $(NAME)\033[0m %-28s\033[32m[$<]\033[0m\n"
+	@$(CC) $(VERSION) $(FLAGS) $(O_FLAG) $(HEADERS) -fpic -c $< -o $@
 	@printf "\033[A\033[2K"
 
 clean:
@@ -92,12 +92,12 @@ fclean: clean
 libft:
 	@$(MAKE) -C $(LIBFTDIR)
 
-noflags: FLAGS :=
+noflags: FLAGS := 
 noflags: re
 
 purge: fclean
 	@$(MAKE) fclean -C $(LIBFTDIR)
 
-re: fclean fast
+re: fclean all
 
 .PHONY: all clean fast fclean libft noflags purge re

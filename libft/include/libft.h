@@ -15,6 +15,4 @@
 
 # include "dependencies.h"
 
-# include "libft/api.h"
-
 #endif

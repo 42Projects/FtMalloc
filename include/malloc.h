@@ -1,29 +1,31 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   malloc.h                                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: nfinkel <nfinkel@student.42.fr>            +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2018/08/25 16:05:42 by nfinkel           #+#    #+#             */
-/*   Updated: 2018/08/25 20:31:26 by nfinkel          ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #ifndef MALLOC_H
 # define MALLOC_H
 
-# include "libft.h"
+# include "../libft/include/libft.h"
+# include <errno.h>
+# include <pthread.h>
 # include <sys/mman.h>
 
 # define TINY
 # define SMALL
 # define LARGE
 
-bool	g_mutex;
+# define TCACHE_FILL_COUNT 7
+
+typedef struct		s_arena {
+	pthread_mutex_t lock;
+	__uint64_t		arenas;
+
+
+	struct s_arena *next;
+}					t_arena;
+
+typedef struct		s_malloc {
+	t_arena			*arena;
+}					t_malloc;
 
 void	free(void *ptr);
-void	*malloc(size_t size);
+void	*__malloc(size_t size);
 void	*realloc(void *ptr, size_t size);
 void	show_alloc_mem(void);
 void	show_alloc_mem_ex(void);
