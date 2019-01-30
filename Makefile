@@ -6,7 +6,7 @@
 #    By: nfinkel <nfinkel@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2018/08/25 16:03:14 by nfinkel           #+#    #+#              #
-#    Updated: 2019/01/29 16:20:39 by nfinkel          ###   ########.fr        #
+#    Updated: 2019/01/30 16:52:51 by nfinkel          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -61,7 +61,6 @@ vpath %.c $(SRC_DIR)
 
 all: $(NAME)
 
-#	@$(CC) $(VERSION) $(DYN_FLAG)$(FLAGS) $(O_FLAG) $(patsubst %.c,$(OBJDIR)%.o,$(notdir $(SRCS))) -L $(LIBFTDIR) -lft -o $@
 $(NAME): $(OBJECTS)
 	@$(CC) $(VERSION) $(DYN_FLAG)$(FLAGS) $(O_FLAG) $(patsubst %.c,$(OBJDIR)%.o,$(notdir $(SRCS))) -o $@
 	@printf  "\033[92m\033[1;32mCompiling -------------> \033[91m$(NAME)\033[0m:\033[0m%-13s\033[32m[✔]\033[0m\n"
