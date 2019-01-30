@@ -1,8 +1,5 @@
 .idea
 build/
-libft_malloc.so
-libft_malloc_x86_64_Linux.so
-CMakeLists.txt
 cmake-build-debug
 a.out
 main.c
