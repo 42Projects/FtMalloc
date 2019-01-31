@@ -15,7 +15,6 @@ SYMLINK :=				libft_malloc.so
 
 #	Compiler
 CC :=					gcc
-VERSION :=				-std=c11
 
 #	Flags
 ifeq ($(OS), Darwin)
@@ -35,6 +34,7 @@ LIBFTDIR :=				./libft/
 OBJDIR :=				./build/
 SRC_DIR :=				./src/
 
+SRC +=					debug.c
 SRC +=					free.c
 SRC +=					malloc.c
 SRC +=					realloc.c
@@ -52,7 +52,7 @@ vpath %.c $(SRC_DIR)
 all: $(NAME)
 
 $(NAME): $(OBJECTS)
-	@$(CC) $(VERSION) $(DYN_FLAG)$(FLAGS) $(O_FLAG) $(patsubst %.c,$(OBJDIR)%.o,$(notdir $(SRCS))) -o $@
+	@$(CC) $(DYN_FLAG)$(FLAGS) $(O_FLAG) $(patsubst %.c,$(OBJDIR)%.o,$(notdir $(SRCS))) -o $@
 	@printf  "\033[92m\033[1;32mCompiling -------------> \033[91m$(NAME)\033[0m:\033[0m%-13s\033[32m[✔]\033[0m\n"
 	@ln -s $@ $(SYMLINK)
 
@@ -63,7 +63,7 @@ $(OBJDIR):
 
 $(OBJDIR)%.o: %.c
 	@printf  "\033[1;92mCompiling $(NAME)\033[0m %-28s\033[32m[$<]\033[0m\n"
-	@$(CC) $(VERSION) $(FLAGS) $(O_FLAG) $(HEADERS) -fpic -c $< -o $@
+	@$(CC) $(FLAGS) $(O_FLAG) $(HEADERS) -fpic -c $< -o $@
 	@printf "\033[A\033[2K"
 
 clean:

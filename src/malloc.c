@@ -9,13 +9,13 @@ static t_arena_map		*g_arena_map = NULL;
 static pthread_mutex_t	g_arena_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
-void
+static void
 terminate (void) {
 	munmap(g_arena_map, g_arena_map->size);
 }
 
-t_arena *
-create_new_arena (size_t size, long pagesize, int flags, pthread_t self) {
+static t_arena *
+create_new_arena (size_t size, long pagesize, int flags, pthread_t self, pthread_mutex_t *mutex) {
 
 	/* Our arena needs to contain the arena header and one header per chunk. Add these to the requested size. */
 	static size_t headers_size = sizeof(t_arena) + sizeof(t_chunk) * CHUNKS_PER_ARENA;
@@ -31,29 +31,13 @@ create_new_arena (size_t size, long pagesize, int flags, pthread_t self) {
 		size += sizeof(t_arena) + sizeof(t_chunk);
 	}
 	size_t rounded_size = size + pagesize - (size % pagesize);
-	int fd = open("/dev/zero", O_RDWR);
-	t_arena *new_arena = mmap(NULL, rounded_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-	close(fd);
+	t_arena *new_arena = mmap(NULL, rounded_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
 
 	/* Let's assume that usually the allocation will succeed. But if it doesn't. */
 	if (__builtin_expect(new_arena == MAP_FAILED, 0)) {
-		if (flags & 1 << DEBUG) {
-			perror("malloc(): create_new_area failed: ");
-		}
 		errno = ENOMEM;
+		pthread_mutex_unlock(mutex);
 		return new_arena;
-	}
-
-	if (__builtin_expect(flags & 1 << DEBUG, 0)) {
-		printf("Thread %p created a new arena\n",
-#ifdef __APPLE__
-		self);
-#elif __linux__
-		(void *)self);
-#endif
-	}
-	if (__builtin_expect(flags & 1 << VERBOSE, 0)) {
-		printf(" - Arena start: %p\n - Size: %lu\n", new_arena, rounded_size);
 	}
 
 	new_arena->id = self;
@@ -81,6 +65,7 @@ __malloc (size_t size)
 
 	/* Get current program thread address and bucket. */
 	pthread_t self = pthread_self();
+
 	unsigned long bucket_offset = fast_hash((unsigned long)self) * sizeof(t_bucket);
 
 	/*
@@ -110,23 +95,15 @@ __malloc (size_t size)
 		size_t map_size = sizeof(t_arena_map) + HASH_TABLE_SIZE * sizeof(t_bucket);
 		size_t rounded_size = map_size + pagesize - (map_size % pagesize);
 
-		int fd = open("/dev/zero", O_RDWR);
-		g_arena_map = mmap(NULL, rounded_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-		close(fd);
-		if (g_arena_map == MAP_FAILED) return NULL;
+		g_arena_map = mmap(NULL, rounded_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+		if (g_arena_map == MAP_FAILED) {
+			pthread_mutex_unlock(&g_arena_mutex);
+			return NULL;
+		}
 		g_arena_map->size = rounded_size;
 
-		if (__builtin_expect(flags & 1 << DEBUG, 0)) {
-			printf("Thread %3$p allocated arena_map\n - Address: %1$p\n - Size: %2$lu\n", g_arena_map, rounded_size,
-#if __APPLE__
-					self);
-#elif __linux__
-					(void*)self);
-#endif
-		}
-
 		/* Initialize thread arena. */
-		current_arena = create_new_arena(size, pagesize, flags, self);
+		current_arena = create_new_arena(size, pagesize, flags, self, &g_arena_mutex);
 		if (current_arena == MAP_FAILED) return NULL;
 
 		/* Align bucket start on 16bytes boundary. */
@@ -156,7 +133,7 @@ __malloc (size_t size)
 
 		/* If the memory space at the bucket emplacement is empty, we can create one straight away. */
 		if (bucket->arena == NULL) {
-			current_arena = create_new_arena(size, pagesize, flags, self);
+			current_arena = create_new_arena(size, pagesize, flags, self, &bucket->mutex);
 			if (current_arena == MAP_FAILED) return NULL;
 			bucket->arena = current_arena;
 
@@ -180,9 +157,8 @@ __malloc (size_t size)
 			}
 
 			/* We didn't find an existing arena, we're going to have to create one and add it to the bucket. */
-
 			if (anchor != NULL) {
-				current_arena = create_new_arena(size, pagesize, flags, self);
+				current_arena = create_new_arena(size, pagesize, flags, self, &bucket->mutex);
 				if (current_arena == MAP_FAILED) return NULL;
 				anchor->next = current_arena;
 			}

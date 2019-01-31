@@ -1,6 +1,7 @@
-#ifndef MALLOC_PRIVATE_H
-# define MALLOC_PRIVATE_H
+#ifndef __MALLOC_PRIVATE_H
+# define __MALLOC_PRIVATE_H
 
+# include "malloc.h"
 # include <errno.h>
 # include <fcntl.h>
 # include <pthread.h>
@@ -9,19 +10,16 @@
 # include <unistd.h>
 
 # define CHUNKS_PER_ARENA 100
-# define TINY 256
 # define SMALL 4096
 # define HASH_TABLE_SIZE 128
 
-
-enum 				e_debug_flags {
+enum	e_debug_flags {
 
 	/* Will print general information. */
 	DEBUG = 0,
 
 	/* Will print even more information. */
 	VERBOSE,
-
 };
 
 typedef struct		s_chunk {
@@ -46,4 +44,4 @@ typedef struct		s_arena_map {
 	t_bucket 		*bucket_start[0];
 }					t_arena_map;
 
-#endif
+#endif /* __MALLOC_PRIVATE_H */
