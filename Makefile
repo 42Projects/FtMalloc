@@ -1,15 +1,3 @@
-# **************************************************************************** #
-#                                                                              #
-#                                                         :::      ::::::::    #
-#    Makefile                                           :+:      :+:    :+:    #
-#                                                     +:+ +:+         +:+      #
-#    By: nfinkel <nfinkel@student.42.fr>            +#+  +:+       +#+         #
-#                                                 +#+#+#+#+#+   +#+            #
-#    Created: 2018/08/25 16:03:14 by nfinkel           #+#    #+#              #
-#    Updated: 2019/01/30 16:52:51 by nfinkel          ###   ########.fr        #
-#                                                                              #
-# **************************************************************************** #
-
 #################
 ##  VARIABLES  ##
 #################
@@ -47,7 +35,9 @@ LIBFTDIR :=				./libft/
 OBJDIR :=				./build/
 SRC_DIR :=				./src/
 
-SRC +=					free.c malloc.c realloc.c
+SRC +=					free.c
+SRC +=					malloc.c
+SRC +=					realloc.c
 
 #	Sources
 OBJECTS =				$(patsubst %.c,$(OBJDIR)%.o,$(SRCS))
@@ -88,15 +78,11 @@ fclean: clean
 	@/bin/rm -f $(SYMLINK)
 	@printf  "\033[1;32mCleaning binary -------> \033[91m$(NAME)\033[0m\033[1;32m:\033[0m%-13s\033[32m[✔]\033[0m\n"
 
-libft:
-	@$(MAKE) -C $(LIBFTDIR)
-
 noflags: FLAGS := 
 noflags: re
 
 purge: fclean
-	@$(MAKE) fclean -C $(LIBFTDIR)
 
 re: fclean all
 
-.PHONY: all clean fast fclean libft noflags purge re
+.PHONY: all clean fast fclean noflags purge re

@@ -1,6 +1,5 @@
 .idea
 build/
 cmake-build-debug
-a.out
-main.c
 libft_malloc*
+multithreading_test

@@ -14,10 +14,5 @@ add_executable(ft_malloc
         src/malloc.c
         src/malloc_private.h
         src/realloc.c
-        tests/run.sh
         tests/test0.c
-        main.c
-        auteur
-        ft_malloc.en.pdf
-        Makefile
-        README.md)
+        tests/multithreading.c)
