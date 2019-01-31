@@ -4,10 +4,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <limits.h>
 
 #define NUM_THREAD 32
 #define FIRST_MALLOC_SIZE 256
-#define SECOND_MALLOC_SIZE 1 << 16
+#define SECOND_MALLOC_SIZE 4096
 
 void	*g_array[NUM_THREAD];
 
@@ -17,6 +18,7 @@ static void
 	if ((ret = __malloc(FIRST_MALLOC_SIZE)) == NULL) {
 		printf("%d : NOMEM\n", *(int *)info);
 	}
+
 	g_array[*(int *)info] = ret;
 
 	pthread_exit(NULL);

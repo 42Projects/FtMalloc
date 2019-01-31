@@ -1,4 +1,5 @@
 #include "mallocp.h"
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <syscall.h>
@@ -40,8 +41,6 @@ create_new_arena (size_t size, long pagesize, pthread_t self, pthread_mutex_t *m
 		return new_arena;
 	}
 
-	printf("NEW ARENA\n");
-
 	new_arena->id = self;
 	return new_arena;
 }
@@ -58,8 +57,6 @@ fast_hash (unsigned long x) {
 void *
 __malloc (size_t size)
 {
-	if (size <= 0) return NULL;
-
 	static int				flags = 0;
 	static long				pagesize = 0;
 	t_arena					*current_arena = NULL;
