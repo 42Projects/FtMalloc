@@ -1,4 +1,4 @@
-#include "malloc_private.h"
+#include "mallocp.h"
 #include <stdio.h>
 #include <string.h>
 #include <syscall.h>
@@ -15,7 +15,7 @@ terminate (void) {
 }
 
 static t_arena *
-create_new_arena (size_t size, long pagesize, int flags, pthread_t self, pthread_mutex_t *mutex) {
+create_new_arena (size_t size, long pagesize, pthread_t self, pthread_mutex_t *mutex) {
 
 	/* Our arena needs to contain the arena header and one header per chunk. Add these to the requested size. */
 	static size_t headers_size = sizeof(t_arena) + sizeof(t_chunk) * CHUNKS_PER_ARENA;
@@ -25,7 +25,7 @@ create_new_arena (size_t size, long pagesize, int flags, pthread_t self, pthread
 	   CHUNKS_PER_ARENA times this size to prepare for future malloc. If the requested size exceeds that value, nearest
 	   page size will do.
 	*/
-	if (size <= SMALL) {
+	if (size <= SIZE_SMALL) {
 		size = size * 100 + headers_size;
 	} else {
 		size += sizeof(t_arena) + sizeof(t_chunk);
@@ -39,6 +39,8 @@ create_new_arena (size_t size, long pagesize, int flags, pthread_t self, pthread
 		pthread_mutex_unlock(mutex);
 		return new_arena;
 	}
+
+	printf("NEW ARENA\n");
 
 	new_arena->id = self;
 	return new_arena;
@@ -60,13 +62,11 @@ __malloc (size_t size)
 
 	static int				flags = 0;
 	static long				pagesize = 0;
-	static t_bucket			*aligned_bucket_start = NULL;
 	t_arena					*current_arena = NULL;
 
 	/* Get current program thread address and bucket. */
 	pthread_t self = pthread_self();
-
-	unsigned long bucket_offset = fast_hash((unsigned long)self) * sizeof(t_bucket);
+	unsigned long target = fast_hash((unsigned long)self);
 
 	/*
 	   First malloc may be called simultaneously by different threads. In order to prevent the arena map being created
@@ -92,7 +92,7 @@ __malloc (size_t size)
 		   slower access time. Bigger means more buckets, which should reduce collisions and access time, but will take
 		   more memory. We use a HASH_TABLE_SIZE value that is a power of 2 and can fill a pagesize as much as possible.
 		*/
-		size_t map_size = sizeof(t_arena_map) + HASH_TABLE_SIZE * sizeof(t_bucket);
+		size_t map_size = sizeof(t_arena_map) + 15;
 		size_t rounded_size = map_size + pagesize - (map_size % pagesize);
 
 		g_arena_map = mmap(NULL, rounded_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
@@ -100,17 +100,17 @@ __malloc (size_t size)
 			pthread_mutex_unlock(&g_arena_mutex);
 			return NULL;
 		}
+
+		/* Align arena on a 16bytes boundary. */
+		g_arena_map = (t_arena_map *)(((unsigned long)g_arena_map + 15) & ~0x0f);
 		g_arena_map->size = rounded_size;
 
 		/* Initialize thread arena. */
-		current_arena = create_new_arena(size, pagesize, flags, self, &g_arena_mutex);
+		current_arena = create_new_arena(size, pagesize, self, &g_arena_mutex);
 		if (current_arena == MAP_FAILED) return NULL;
 
-		/* Align bucket start on 16bytes boundary. */
-		aligned_bucket_start = (t_bucket *)(((unsigned long)g_arena_map->bucket_start + 15) & ~0x0f);
-
 		/* Place thread arena in corresponding bucket. */
-		((t_bucket *)((unsigned long)aligned_bucket_start + bucket_offset))->arena = current_arena;
+		g_arena_map->buckets[target].arena = current_arena;
 
 		pthread_mutex_unlock(&g_arena_mutex);
 
@@ -128,16 +128,16 @@ __malloc (size_t size)
 		*/
 
 		/* Lock the bucket mutex. */
-		t_bucket *bucket = (t_bucket *) ((unsigned long) aligned_bucket_start + bucket_offset);
+		t_bucket *bucket = &g_arena_map->buckets[target];
 		pthread_mutex_lock(&bucket->mutex);
 
 		/* If the memory space at the bucket emplacement is empty, we can create one straight away. */
 		if (bucket->arena == NULL) {
-			current_arena = create_new_arena(size, pagesize, flags, self, &bucket->mutex);
+			current_arena = create_new_arena(size, pagesize, self, &bucket->mutex);
 			if (current_arena == MAP_FAILED) return NULL;
 			bucket->arena = current_arena;
 
-		} else { /* Otherwise, there is a collision with another thread hash. */
+		} else { /* Otherwise, there might be a collision with another thread hash. */
 
 			/*
 			   Let's check if there's an arena that belongs to our thread in the bucket.
@@ -158,7 +158,7 @@ __malloc (size_t size)
 
 			/* We didn't find an existing arena, we're going to have to create one and add it to the bucket. */
 			if (anchor != NULL) {
-				current_arena = create_new_arena(size, pagesize, flags, self, &bucket->mutex);
+				current_arena = create_new_arena(size, pagesize, self, &bucket->mutex);
 				if (current_arena == MAP_FAILED) return NULL;
 				anchor->next = current_arena;
 			}

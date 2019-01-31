@@ -11,10 +11,10 @@ include_directories(tests)
 add_executable(ft_malloc
         include/malloc.h
         src/debug.c
-        src/debug_private.h
+        src/debugp.h
         src/free.c
         src/malloc.c
-        src/malloc_private.h
+        src/mallocp.h
         src/realloc.c
         tests/test0.c
         tests/multithreading.c)

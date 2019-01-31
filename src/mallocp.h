@@ -10,16 +10,22 @@
 # include <unistd.h>
 
 # define CHUNKS_PER_ARENA 100
-# define SMALL 4096
-# define HASH_TABLE_SIZE 128
+# define SIZE_SMALL 4096
+# define HASH_TABLE_SIZE 64
 
-enum	e_debug_flags {
+enum				e_debug_flags {
 
 	/* Will print general information. */
 	DEBUG = 0,
 
 	/* Will print even more information. */
 	VERBOSE,
+};
+
+enum				e_size {
+	TINY = 0,
+	SMALL,
+	LARGE
 };
 
 typedef struct		s_chunk {
@@ -41,7 +47,7 @@ typedef struct 		s_bucket {
 
 typedef struct		s_arena_map {
 	size_t 			size;
-	t_bucket 		*bucket_start[0];
+	t_bucket 		buckets[HASH_TABLE_SIZE];
 }					t_arena_map;
 
 #endif /* __MALLOC_PRIVATE_H */
