@@ -12,7 +12,13 @@ static t_arena	*g_main_arena = NULL;
 
 static void
 terminate (void) {
-	munmap(g_main_arena, g_main_arena->size);
+	t_arena *arena = g_main_arena, *next;
+
+	do {
+		next = arena->next;
+		munmap(arena, arena->size);
+		arena = next;
+	} while (next != NULL && next != g_main_arena);
 }
 
 static t_arena *
@@ -40,8 +46,6 @@ create_new_arena (size_t size, long pagesize, pthread_mutex_t *mutex) {
 		pthread_mutex_unlock(mutex);
 		return new_arena;
 	}
-
-	printf("Thread %p is creating a new arena at address %p\n", (void *)pthread_self(), new_arena);
 
 	pthread_mutex_lock(&new_arena->mutex);
 	new_arena->size = rounded_size;
@@ -77,6 +81,8 @@ __malloc (size_t size)
 		g_main_arena = create_new_arena(size, pagesize, &main_arena_mutex);
 		if (g_main_arena == MAP_FAILED) return NULL;
 		current_arena = g_main_arena;
+
+		if (MAX_ARENA_COUNT == 1) g_main_arena->next = g_main_arena;
 
 		pthread_mutex_unlock(&main_arena_mutex);
 
@@ -114,8 +120,8 @@ __malloc (size_t size)
 		}
 
 		/*
-		   If the next current_arena is NULL, all arenas are locked by other threads but there is still space to create
-		   more. Let's just do that.
+		   If creator is true, all arenas are occupied by other threads but there is still space to create more.
+		   Let's just do that.
 		*/
 
 		if (creator == true) {
