@@ -6,9 +6,9 @@
 #include <unistd.h>
 #include <limits.h>
 
-#define NUM_THREAD 32000
-#define FIRST_MALLOC_SIZE 256
-#define SECOND_MALLOC_SIZE 4096
+#define NUM_THREAD 32
+#define FIRST_MALLOC_SIZE 1LL << 59
+#define SECOND_MALLOC_SIZE 1LL << 59
 
 void	*g_array[NUM_THREAD];
 
@@ -39,7 +39,7 @@ main (void) {
 	//setenv("DEBUG", "1", 1);
 
 	/* Test for arena collision, true means there are race condition. */
-	printf("First batch of threads is calling malloc of size %d...\n", FIRST_MALLOC_SIZE);
+	printf("First batch of threads is calling malloc of data %d...\n", FIRST_MALLOC_SIZE);
 	for (int k = 0; k < NUM_THREAD; k++) {
 		info[k] = k;
 		pthread_create(th + k, NULL, race_condition, info + k);
@@ -61,7 +61,7 @@ main (void) {
 	dprintf(1, "Arena collision test: %s\x1b[0m\n", success == false ? "\x1b[1;34mFAIL" : "\x1b[32mPASS");
 */
 	/* Test 2 */
-	printf("Second batch of threads is calling malloc of size %d...\n", SECOND_MALLOC_SIZE);
+	printf("Second batch of threads is calling malloc of data %d...\n", SECOND_MALLOC_SIZE);
 	for (int k = 0; k < NUM_THREAD; k++) {
 		info[k] = k;
 		pthread_create(th2 + k, NULL, second_call, info + k);
@@ -69,6 +69,8 @@ main (void) {
 	for (int k = 0; k < NUM_THREAD; k++) {
 		pthread_join(th2[k], NULL);
 	}
+
+	show_alloc_mem();
 
 	return 0;
 }

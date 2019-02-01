@@ -1,19 +1,30 @@
 #ifndef __MALLOC_PRIVATE_H
 # define __MALLOC_PRIVATE_H
 
-# include "malloc.h"
+# include "arenap.h"
+
+/* For errno */
 # include <errno.h>
-# include <fcntl.h>
-# include <pthread.h>
+
+/* For bool. */
+# include <stdbool.h>
+
+/* For getenv and atexit. */
 # include <stdlib.h>
+
+/* For mmap and munmap. */
 # include <sys/mman.h>
+
+/* For sysconf and _SC_PAGESIZE. */
 # include <unistd.h>
 
+
 # define CHUNKS_PER_ARENA 100
+# define SIZE_TINY 256
 # define SIZE_SMALL 4096
 # define MAX_ARENA_COUNT 16
 
-enum				e_debug_flags {
+enum					e_debug_flags {
 
 	/* Will print general information. */
 	DEBUG = 0,
@@ -22,23 +33,11 @@ enum				e_debug_flags {
 	VERBOSE,
 };
 
-enum				e_size {
-	TINY = 0,
-	SMALL,
-	LARGE
-};
+typedef __uint8_t 		user_ptr_t;
 
-typedef struct		s_chunk {
-	size_t 			size;
-	void			*start;
-}					t_chunk;
-
-typedef struct		s_arena {
-	pthread_mutex_t	mutex;
-	size_t 			size;
-
-	struct s_arena	*next;
-	char 			chunk[0];
-}					t_arena;
+typedef struct			s_chunk {
+	size_t 				size;
+	user_ptr_t 			user_area[0];
+}						t_chunk;
 
 #endif /* __MALLOC_PRIVATE_H */

@@ -30,7 +30,6 @@ HEADERS :=				-I ./include/
 O_FLAG :=				-O2
 
 #	Directories
-LIBFTDIR :=				./libft/
 OBJDIR :=				./build/
 SRC_DIR :=				./src/
 
@@ -38,6 +37,7 @@ SRC +=					debug.c
 SRC +=					free.c
 SRC +=					malloc.c
 SRC +=					realloc.c
+SRC +=					show.c
 
 #	Sources
 OBJECTS =				$(patsubst %.c,$(OBJDIR)%.o,$(SRCS))

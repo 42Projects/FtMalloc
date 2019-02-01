@@ -1,13 +1,10 @@
 #include "mallocp.h"
-#include <limits.h>
-#include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
-#include <syscall.h>
-#include <ompt.h>
 
 
-static t_arena	*g_main_arena = NULL;
+t_arena
+*g_main_arena = NULL;
+
 
 
 static void
@@ -16,25 +13,30 @@ terminate (void) {
 
 	do {
 		next = arena->next;
-		munmap(arena, arena->size);
+		munmap(arena, arena->data & ((1LL << CHUNK_TYPE_TINY) - 1));
 		arena = next;
 	} while (next != NULL && next != g_main_arena);
 }
 
-static t_arena *
-create_new_arena (size_t size, long pagesize, pthread_mutex_t *mutex) {
 
-	/* Our arena needs to contain the arena header and one header per chunk. Add these to the requested size. */
+
+static t_arena *
+create_new_arena (size_t size, int type, long pagesize, pthread_mutex_t *mutex) {
+
+	/* Our arena needs to contain the arena header and one header per chunk. Add these to the requested data. */
 	static size_t headers_size = sizeof(t_arena) + sizeof(t_chunk) * CHUNKS_PER_ARENA;
 
 	/*
-	   Allocate memory using mmap. If the requested size isn't that big, we allocate enough memory to hold
-	   CHUNKS_PER_ARENA times this size to prepare for future malloc. If the requested size exceeds that value, nearest
-	   page size will do.
+	   Allocate memory using mmap. If the requested data isn't that big, we allocate enough memory to hold
+	   CHUNKS_PER_ARENA times this data to prepare for future malloc. If the requested data exceeds that value, nearest
+	   page data will do.
 	*/
+	int size_type;
 	if (size <= SIZE_SMALL) {
+		size_type = size <= SIZE_TINY ? CHUNK_TYPE_TINY : CHUNK_TYPE_SMALL;
 		size = size * 100 + headers_size;
 	} else {
+		size_type = CHUNK_TYPE_LARGE;
 		size += sizeof(t_arena) + sizeof(t_chunk);
 	}
 	size_t rounded_size = size + pagesize - (size % pagesize);
@@ -47,10 +49,19 @@ create_new_arena (size_t size, long pagesize, pthread_mutex_t *mutex) {
 		return new_arena;
 	}
 
-	pthread_mutex_lock(&new_arena->mutex);
-	new_arena->size = rounded_size;
+	new_arena->data = rounded_size;
+	new_arena->data |= 1LL << size_type;
+
+	/* If arena is either main_arena or belong to it's linked list, toggle it's mutex and add a flag. */
+	if (type == ARENA_TYPE_MAIN || type == ARENA_TYPE_LINKED) {
+		pthread_mutex_lock(&new_arena->u_data.mutex);
+		new_arena->data |= 1ULL << type;
+	}
+
 	return new_arena;
 }
+
+
 
 void *
 __malloc (size_t size)
@@ -59,6 +70,8 @@ __malloc (size_t size)
 	static long				pagesize = 0;
 	static pthread_mutex_t	main_arena_mutex = PTHREAD_MUTEX_INITIALIZER, new_arena_mutex = PTHREAD_MUTEX_INITIALIZER;
 	t_arena					*current_arena = NULL;
+
+	if (size >= 1LL << CHUNK_TYPE_TINY) return NULL;
 
 	/*
 	   First malloc may be called simultaneously by different threads. In order to prevent the main arena being created
@@ -78,11 +91,13 @@ __malloc (size_t size)
 		if (getenv("VERBOSE") != NULL) flags |= 1 << VERBOSE;
 
 		/* Initialize main arena and set it as the current arena. */
-		g_main_arena = create_new_arena(size, pagesize, &main_arena_mutex);
+		g_main_arena = create_new_arena(size, ARENA_TYPE_MAIN, pagesize, &main_arena_mutex);
 		if (g_main_arena == MAP_FAILED) return NULL;
 		current_arena = g_main_arena;
 
-		if (MAX_ARENA_COUNT == 1) g_main_arena->next = g_main_arena;
+#if MAX_ARENA_COUNT == 1
+		g_main_arena->next = g_main_arena;
+#endif
 
 		pthread_mutex_unlock(&main_arena_mutex);
 
@@ -103,7 +118,7 @@ __malloc (size_t size)
 		/* Look for an open arena. */
 		bool creator = false;
 		current_arena = g_main_arena;
-		while (pthread_mutex_trylock(&current_arena->mutex) != 0) {
+		while (pthread_mutex_trylock(&current_arena->u_data.mutex) != 0) {
 			if (current_arena->next == NULL) {
 
 				/* We need to prevent several threads from creating new arenas simultaneously. */
@@ -127,7 +142,7 @@ __malloc (size_t size)
 		if (creator == true) {
 
 			/* Create a new arena and set it as the current arena. */
-			current_arena->next = create_new_arena(size, pagesize, &new_arena_mutex);
+			current_arena->next = create_new_arena(size, ARENA_TYPE_LINKED, pagesize, &new_arena_mutex);
 			if (current_arena == MAP_FAILED) return NULL;
 			current_arena = current_arena->next;
 
@@ -135,11 +150,10 @@ __malloc (size_t size)
 			if (++arena_count == MAX_ARENA_COUNT) current_arena->next = g_main_arena;
 
 			pthread_mutex_unlock(&new_arena_mutex);
-
 		}
 	}
 
-	pthread_mutex_unlock(&current_arena->mutex);
+	pthread_mutex_unlock(&current_arena->u_data.mutex);
 
 	return current_arena;
 }
