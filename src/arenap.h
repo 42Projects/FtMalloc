@@ -3,33 +3,41 @@
 
 # include <pthread.h>
 
-# define is_main_arena(arena) (arena->data & (1LL << ARENA_TYPE_MAIN))
-# define is_linked_arena(arena) (arena->data & (1LL << ARENA_TYPE_LINKED))
-# define tiny_chunks_arena(arena) (arena->data & (1LL << CHUNK_TYPE_TINY))
-# define small_chunks_arena(arena) (arena->data & (1LL << CHUNK_TYPE_SMALL))
-# define large_chunks_arena(arena) (arena->data & (1LL << CHUNK_TYPE_LARGE))
+# define pool_is_empty(pool) (pool->size & (1LL << EMPTY_POOL))
+# define pool_type_match(pool, chunk_type) (pool->size & (1LL << chunk_type))
 
-enum					e_type {
-	CHUNK_TYPE_TINY = 59,
+# define FLAG_THRESHOLD 60
+
+enum				e_type {
+	ARENA,
+	POOL,
+	CHUNK_TYPE_TINY = FLAG_THRESHOLD + 1,
 	CHUNK_TYPE_SMALL,
-	CHUNK_TYPE_LARGE,
-	ARENA_TYPE_LINKED,
-	ARENA_TYPE_MAIN
+	CHUNK_TYPE_LARGE
 };
 
-typedef __uint8_t		chunk_ptr_t;
+typedef struct		s_chunk {
+	__uint64_t		size;
+	struct s_chunk	*next;
+	struct s_chunk	*prev;
+	__uint64_t 		__padding;
+	__uint8_t		user_area[0];
+}					t_chunk;
 
-typedef struct			s_arena {
-	__uint64_t 			data;
-	union {
-		pthread_mutex_t	mutex;
+typedef struct 		s_pool {
+	__uint64_t 		size;
+	__uint64_t 		free_size;
+	struct s_pool	*next;
+	struct s_pool	*prev;
+	__uint8_t		chunk[0];
+}					t_pool;
 
-	}					u_data;
+typedef struct		s_arena {
+	pthread_mutex_t	mutex;
+	struct s_arena	*next;
+	__uint8_t		pool[0];
+}					t_arena;
 
-	struct s_arena		*next;
-	chunk_ptr_t 		chunk[0];
-}						t_arena;
-
-extern t_arena			*g_main_arena;
+extern t_arena		*g_main_arena;
 
 #endif /* __ARENA_PRIVATE_H */

@@ -7,8 +7,8 @@
 #include <limits.h>
 
 #define NUM_THREAD 32
-#define FIRST_MALLOC_SIZE 1LL << 59
-#define SECOND_MALLOC_SIZE 1LL << 59
+#define FIRST_MALLOC_SIZE 5000
+#define SECOND_MALLOC_SIZE 15000
 
 void	*g_array[NUM_THREAD];
 
@@ -48,7 +48,7 @@ main (void) {
 		pthread_join(th[k], NULL);
 	}
 
-/*	bool success = true;
+	bool success = true;
 	for (int k = 0; k < NUM_THREAD - 1; k++) {
 		for (int p = k + 1; p < NUM_THREAD; p++) {
 			if (g_array[p] == g_array[k]) {
@@ -59,7 +59,7 @@ main (void) {
 		}
 	}
 	dprintf(1, "Arena collision test: %s\x1b[0m\n", success == false ? "\x1b[1;34mFAIL" : "\x1b[32mPASS");
-*/
+
 	/* Test 2 */
 	printf("Second batch of threads is calling malloc of data %d...\n", SECOND_MALLOC_SIZE);
 	for (int k = 0; k < NUM_THREAD; k++) {
