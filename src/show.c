@@ -48,52 +48,73 @@ show_alloc_mem (void) {
 
 	if (g_main_arena == NULL) return;
 
-	char 		buffer[BUFF_SIZE];
-	size_t 		offset = 0;
-	t_arena 	*arena = g_main_arena;
-	t_pool 		*pool = NULL;
-	t_chunk		*chunk = NULL;
+	char		 		buffer[BUFF_SIZE];
+	size_t 				offset = 0;
+	t_arena 			*arena = g_main_arena;
+	t_pool 				*pool = NULL;
+	t_alloc_chunk		*chunk = NULL;
 
 	do {
 		buff_string("\n", buffer, &offset);
 
 		/* Display arena address. */
-		buff_string("ARENA AT ", buffer, &offset);
+		buff_string("\x1b[31mARENA AT ", buffer, &offset);
 		buff_number(16, (__uint64_t)arena, buffer, &offset);
 
 		if (arena == g_main_arena) buff_string(" (MAIN)", buffer, &offset);
 
-		buff_string("\n", buffer, &offset);
+		buff_string("\x1b[0m\n", buffer, &offset);
+
 		pool = (t_pool *)arena->pool;
+		if (pool_type_match(pool, CHUNK_TYPE_LARGE)) pool = pool->right;
 
-		do {
+		while (pool != NULL) {
 
-			if (pool_type_match(pool, CHUNK_TYPE_TINY) != 0) {
-				buff_string("TINY : ", buffer, &offset);
-			} else if (pool_type_match(pool, CHUNK_TYPE_SMALL) != 0) {
-				buff_string("SMALL : ", buffer, &offset);
-			} else {
-				buff_string("LARGE : ", buffer, &offset);
+			if (pool_type_match(pool, CHUNK_TYPE_TINY)) {
+				buff_string("\x1b[36mTINY :\x1b[0m ", buffer, &offset);
+			} else if (pool_type_match(pool, CHUNK_TYPE_SMALL)) {
+				buff_string("\x1b[36mSMALL :\x1b[0m ", buffer, &offset);
 			}
 
 			buff_number(16, (__uint64_t)pool, buffer, &offset);
 			buff_string("\n", buffer, &offset);
 
-			chunk = (t_chunk *)pool->chunk;
+			chunk = (t_alloc_chunk *)pool->chunk;
 
-			do {
-				buff_number(16, (__uint64_t)chunk, buffer, &offset);
+			while (1) {
+				buff_number(16, (__uint64_t)chunk->user_area, buffer, &offset);
 				buff_string(" - ", buffer, &offset);
-				buff_number(16, (__uint64_t)(chunk + chunk->size), buffer, &offset);
+				buff_number(16, (__uint64_t)(chunk->user_area + chunk->size), buffer, &offset);
 				buff_string(" : ", buffer, &offset);
 				buff_number(10, chunk->size, buffer, &offset);
 				buff_string(" bytes\n", buffer, &offset);
 
-				chunk = chunk->next;
-			} while (chunk != NULL);
+				chunk = (t_alloc_chunk *)(chunk->user_area + chunk->size);
 
-			pool = pool->next;
-		} while (pool != NULL);
+				if (chunk_is_allocated(chunk) == 0) break;
+			}
+
+			pool = pool->right;
+		}
+
+		pool = (t_pool *)arena->pool;
+		if (pool_type_match(pool, CHUNK_TYPE_LARGE) == 0) pool = pool->left;
+
+		while (pool != NULL) {
+
+			buff_string("\x1b[36mLARGE :\x1b[0m ", buffer, &offset);
+			buff_number(16, (__uint64_t)pool, buffer, &offset);
+			buff_string("\n", buffer, &offset);
+			chunk = (t_alloc_chunk *)pool->chunk;
+			buff_number(16, (__uint64_t)chunk->user_area, buffer, &offset);
+			buff_string(" - ", buffer, &offset);
+			buff_number(16, (__uint64_t)(chunk->user_area + chunk->size), buffer, &offset);
+			buff_string(" : ", buffer, &offset);
+			buff_number(10, chunk->size, buffer, &offset);
+			buff_string(" bytes\n", buffer, &offset);
+
+			pool = pool->left;
+		}
 
 		arena = arena->next;
 	} while (arena != NULL && arena != g_main_arena);
