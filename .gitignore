@@ -2,4 +2,6 @@
 build/
 cmake-build-debug
 libft_malloc*
+test0
+test1
 multithreading_test
