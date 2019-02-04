@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define NUM_THREAD 8
-#define FIRST_MALLOC_SIZE 540
+#define NUM_THREAD 32
+#define FIRST_MALLOC_SIZE 40
 #define SECOND_MALLOC_SIZE 16
 
 void	*g_array[NUM_THREAD];
@@ -37,11 +37,6 @@ main (void) {
 	pthread_t	th[NUM_THREAD];
 	pthread_t	th2[NUM_THREAD];
 	int			info[NUM_THREAD];
-
-	for (int k = 0; k < 1024; k++) {
-		char *buff = (char *)__malloc(1024);
-		buff[0] = 42;
-	}
 
 	//setenv("DEBUG", "1", 1);
 

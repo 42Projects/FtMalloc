@@ -1,4 +1,5 @@
 #include "mallocp.h"
+#include <stdio.h>
 
 
 t_arena	*g_main_arena = NULL;
@@ -69,6 +70,7 @@ create_new_pool (int type, int chunk_type, __uint64_t size, long pagesize, pthre
 	if (type == ARENA) {
 		pool->end = (void *)((__uint64_t)pool->end | (1LL << MAIN_POOL));
 		pool->free_size -= sizeof(t_arena);
+		pthread_mutex_init(&((t_arena *)new_pool)->mutex, NULL);
 		pthread_mutex_lock(&((t_arena *)new_pool)->mutex);
 	}
 
@@ -87,6 +89,7 @@ __malloc (size_t size) {
 	bool					creator = false;
 	t_arena					*current_arena = NULL;
 	t_pool					*current_pool = NULL;
+
 
 	if (size > SIZE_SMALL) {
 		chunk_type = CHUNK_TYPE_LARGE;
