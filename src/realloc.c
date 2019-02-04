@@ -1,6 +1,6 @@
 #include <malloc.h>
 
-void	*realloc(void *ptr, size_t size)
+void	*__realloc(void *ptr, size_t size)
 {
 	(void)ptr;
 	(void)size;

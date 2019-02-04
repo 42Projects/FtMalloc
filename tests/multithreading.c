@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 #define NUM_THREAD 32
-#define FIRST_MALLOC_SIZE 40
+#define FIRST_MALLOC_SIZE 3817
 #define SECOND_MALLOC_SIZE 16
 
 void	*g_array[NUM_THREAD];
@@ -17,6 +17,8 @@ static void
 	void *ret = __malloc(FIRST_MALLOC_SIZE);
 
 //	printf("ret = %p\n", ret);
+
+__free(ret);
 
 	g_array[*(int *)info] = ret;
 
@@ -72,7 +74,7 @@ main (void) {
 		pthread_join(th2[k], NULL);
 	}
 
-//	show_alloc_mem();
+	show_alloc_mem();
 
 	return 0;
 }

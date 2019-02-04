@@ -5,6 +5,7 @@
 # include <stdbool.h>
 
 # define chunk_is_allocated(chunk) (chunk->prev_size & (1LL << ALLOC_CHUNK))
+# define previous_chunk_size(chunk) (chunk->prev_size & ~(1LL << ALLOC_CHUNK))
 # define pool_type_match(pool, chunk_type) ((__uint64_t)pool->end & (1LL << chunk_type))
 # define pool_end(pool) ((__uint64_t)pool->end & 0xffffffffffff)
 
