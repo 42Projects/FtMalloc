@@ -81,8 +81,6 @@ fclean: clean
 noflags: FLAGS := 
 noflags: re
 
-purge: fclean
-
 re: fclean all
 
-.PHONY: all clean fast fclean noflags purge re
+.PHONY: all clean fast fclean noflags re
