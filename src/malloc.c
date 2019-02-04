@@ -80,8 +80,7 @@ create_new_pool (int type, int chunk_type, __uint64_t size, long pagesize, pthre
 void *
 __malloc (size_t size) {
 
-	static int				flags = 0,
-							arena_count = 1;
+	static int				arena_count = 1;
 	static long 			pagesize = 0;
 	static pthread_mutex_t	main_arena_mutex = PTHREAD_MUTEX_INITIALIZER,
 							new_arena_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -115,8 +114,6 @@ __malloc (size_t size) {
 
 		/* Initialize non-runtime constant static variables. This will only be called once. */
 		pagesize = sysconf(_SC_PAGESIZE);
-		if (getenv("DEBUG") != NULL) flags |= 1 << DEBUG;
-		if (getenv("VERBOSE") != NULL) flags |= 1 << VERBOSE;
 
 		/* Initialize main arena and set it as the current arena. */
 		g_main_arena = (t_arena *)create_new_pool(ARENA, chunk_type, size, pagesize, &main_arena_mutex);
@@ -171,7 +168,7 @@ __malloc (size_t size) {
 		current_arena = current_arena->next;
 
 		/* If M_ARENA_MAX is reached, point the main arena as the next arena entry to make the list circular. */
-		if (++arena_count == M_ARENA_MAX) current_arena->next = g_main_arena;
+		if (++arena_count == M_ARENA_MAX_DEFAULT) current_arena->next = g_main_arena;
 
 		pthread_mutex_unlock(&new_arena_mutex);
 		current_pool = (t_pool *)current_arena->pool;

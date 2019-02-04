@@ -1,4 +1,0 @@
-#ifndef __MALLOC_DEBUG_PRIVATE_H
-# define __MALLOC_DEBUG_PRIVATE_H
-
-#endif /* __MALLOC_DEBUG_PRIVATE_H */

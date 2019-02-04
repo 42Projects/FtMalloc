@@ -33,7 +33,6 @@ O_FLAG :=				-O2
 OBJDIR :=				./build/
 SRC_DIR :=				./src/
 
-SRC +=					debug.c
 SRC +=					free.c
 SRC +=					malloc.c
 SRC +=					realloc.c
