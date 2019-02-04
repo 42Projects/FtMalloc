@@ -20,4 +20,5 @@ add_executable(ft_malloc
         src/showp.h
         src/arenap.h
         tests/test0.c
+        tests/test1.c
         tests/multithreading.c)

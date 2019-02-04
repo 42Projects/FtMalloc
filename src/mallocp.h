@@ -2,10 +2,10 @@
 # define __MALLOC_PRIVATE_H
 
 # include "arenap.h"
-# include <sys/mman.h>
 # include <errno.h>
+# include <sys/mman.h>
 
-/* For getenv and atexit. */
+/* For getenv. */
 # include <stdlib.h>
 
 /* For sysconf and _SC_PAGESIZE. */

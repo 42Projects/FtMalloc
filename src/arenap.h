@@ -5,7 +5,8 @@
 # include <stdbool.h>
 
 # define chunk_is_allocated(chunk) (chunk->prev_size & (1LL << ALLOC_CHUNK))
-# define pool_type_match(pool, chunk_type) (pool->size & (1LL << chunk_type))
+# define pool_type_match(pool, chunk_type) ((__uint64_t)pool->end & (1LL << chunk_type))
+# define pool_end(pool) ((__uint64_t)pool->end & 0xffffffffffff)
 
 # define FLAG_THRESHOLD 58
 
@@ -24,7 +25,6 @@ typedef struct			s_free_chunk {
 	__uint64_t			size;
 	struct s_free_chunk	*next;
 	struct s_free_chunk	*prev;
-	__uint8_t			free_area[0];
 }						t_free_chunk;
 
 typedef struct			s_alloc_chunk {
@@ -34,7 +34,7 @@ typedef struct			s_alloc_chunk {
 }						t_alloc_chunk;
 
 typedef struct 			s_pool {
-	__uint64_t 			size;
+	void				*end;
 	__uint64_t 			free_size;
 	struct s_pool		*left;
 	struct s_pool		*right;
