@@ -12,9 +12,9 @@ __free (void *ptr) {
 
 	t_alloc_chunk *chunk = (t_alloc_chunk *)((__uint64_t)ptr - sizeof(t_alloc_chunk));
 
-	if (chunk_is_allocated(chunk) == 0 || (chunk->prev_size & CHECK_MASK) != 0) {
+	if (chunk_is_allocated(chunk) == 0 || (chunk->prev_size & CHECK_MASK) != 0 || ((__uint64_t)ptr % 16) != 0) {
 		write(STDERR_FILENO, "free(): invalid pointer\n", 24);
-		kill(getpid(), SIGABRT);
+		abort();
 	}
 
 	/*
@@ -32,5 +32,5 @@ __free (void *ptr) {
 	if (pool_type_match(pool, CHUNK_TYPE_LARGE)) {
 		printf("LARGE!\n");
 	}
-	
+
 }

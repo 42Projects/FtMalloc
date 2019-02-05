@@ -4,8 +4,8 @@
 # include <pthread.h>
 # include <stdbool.h>
 
-# define chunk_is_allocated(chunk) (chunk->prev_size & (1ULL << ALLOC_CHUNK))
-# define pool_type_match(pool, chunk_type) (pool->size & (1ULL << chunk_type))
+# define chunk_is_allocated(chunk) (chunk->prev_size & (1UL << ALLOC_CHUNK))
+# define pool_type_match(pool, chunk_type) (pool->size & (1UL << chunk_type))
 
 # define FLAG_THRESHOLD 58
 

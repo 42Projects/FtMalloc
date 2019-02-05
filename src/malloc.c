@@ -16,7 +16,7 @@ user_area (t_alloc_chunk *chunk, size_t size, pthread_mutex_t *mutex) {
 	*/
 
 	chunk->size = size;
-	chunk->prev_size |= 1LL << ALLOC_CHUNK;
+	chunk->prev_size |= 1UL << ALLOC_CHUNK;
 	((t_free_chunk *)(chunk->user_area + size))->prev_size = size;
 
 	pthread_mutex_unlock(mutex);
@@ -53,11 +53,11 @@ create_new_pool (int type, int chunk_type, __uint64_t size, long pagesize, pthre
 
 	/* Keep track of the size and free size available. */
 	t_pool *pool = (type == ARENA) ? ((t_arena *)new_pool)->pool : new_pool;
-	pool->size = mmap_size | (1ULL << chunk_type);
+	pool->size = mmap_size | (1UL << chunk_type);
 	pool->free_size = mmap_size - (size + sizeof(t_alloc_chunk) + sizeof(t_pool) + sizeof(__uint64_t));
 
 	if (type == ARENA) {
-		pool->size |= (1ULL << MAIN_POOL);
+		pool->size |= (1UL << MAIN_POOL);
 		pool->free_size -= sizeof(t_arena);
 		pthread_mutex_init(&((t_arena *)new_pool)->mutex, NULL);
 		pthread_mutex_lock(&((t_arena *)new_pool)->mutex);
@@ -84,7 +84,7 @@ __malloc (size_t size) {
 	} else {
 		size = (size + MEM_ALIGN) & ~MEM_ALIGN;
 
-		if (size >= (1ULL << FLAG_THRESHOLD)) return NULL;
+		if (size >= (1UL << FLAG_THRESHOLD)) return NULL;
 
 		chunk_type = (size <= SIZE_TINY) ? CHUNK_TYPE_TINY : CHUNK_TYPE_SMALL;
 	}

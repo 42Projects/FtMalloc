@@ -10,6 +10,6 @@
 # define SIZE_TINY 256
 # define SIZE_SMALL 4096
 # define M_ARENA_MAX_DEFAULT 8
-# define MEM_ALIGN 0xfULL
+# define MEM_ALIGN 0xfUL
 
 #endif /* __MALLOC_PRIVATE_H */
