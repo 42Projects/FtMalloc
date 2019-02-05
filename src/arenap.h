@@ -4,10 +4,8 @@
 # include <pthread.h>
 # include <stdbool.h>
 
-# define chunk_is_allocated(chunk) (chunk->prev_size & (1LL << ALLOC_CHUNK))
-# define previous_chunk_size(chunk) (chunk->prev_size & ~(1LL << ALLOC_CHUNK))
-# define pool_type_match(pool, chunk_type) ((__uint64_t)pool->end & (1LL << chunk_type))
-# define pool_end(pool) ((__uint64_t)pool->end & 0xffffffffffff)
+# define chunk_is_allocated(chunk) (chunk->prev_size & (1ULL << ALLOC_CHUNK))
+# define pool_type_match(pool, chunk_type) (pool->size & (1ULL << chunk_type))
 
 # define FLAG_THRESHOLD 58
 
@@ -24,8 +22,8 @@ enum					e_type {
 typedef struct			s_free_chunk {
 	__uint64_t			prev_size;
 	__uint64_t			size;
+	struct s_pool		*head;
 	struct s_free_chunk	*next;
-	struct s_free_chunk	*prev;
 }						t_free_chunk;
 
 typedef struct			s_alloc_chunk {
@@ -35,8 +33,8 @@ typedef struct			s_alloc_chunk {
 }						t_alloc_chunk;
 
 typedef struct 			s_pool {
-	void				*end;
 	__uint64_t 			free_size;
+	__uint64_t 			size;
 	struct s_pool		*left;
 	struct s_pool		*right;
 	__uint8_t			chunk[0];

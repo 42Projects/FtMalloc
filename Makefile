@@ -17,8 +17,8 @@ SYMLINK :=				libft_malloc.so
 CC :=					gcc
 
 #	Flags
+FLAGS =					-Wall -Wextra -Wcast-align -Wconversion -Werror
 ifeq ($(OS), Darwin)
-	FLAGS +=			-Wall -Wextra -Werror 
 	THREADS :=			$(shell sysctl -n hw.ncpu)
 else
 	THREADS :=			4
@@ -51,7 +51,7 @@ vpath %.c $(SRC_DIR)
 all: $(NAME)
 
 $(NAME): $(OBJECTS)
-	@$(CC) $(DYN_FLAG)$(FLAGS) $(O_FLAG) $(patsubst %.c,$(OBJDIR)%.o,$(notdir $(SRCS))) -o $@
+	@$(CC) $(DYN_FLAG) $(FLAGS) $(O_FLAG) $(patsubst %.c,$(OBJDIR)%.o,$(notdir $(SRCS))) -o $@
 	@printf  "\033[92m\033[1;32mCompiling -------------> \033[91m$(NAME)\033[0m:\033[0m%-13s\033[32m[✔]\033[0m\n"
 	@ln -s $@ $(SYMLINK)
 

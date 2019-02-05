@@ -1,8 +1,7 @@
 #ifndef MALLOC_H
 # define MALLOC_H
 
-/* For size_t. */
-# include <stddef.h>
+# include <unistd.h>
 
 void	__free(void *ptr);
 void	*__malloc(size_t size);
