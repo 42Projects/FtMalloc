@@ -17,7 +17,8 @@ SYMLINK :=				libft_malloc.so
 CC :=					gcc
 
 #	Flags
-FLAGS =					-Wall -Wextra -Wcast-align -Wconversion -Werror
+DEBUG =					
+FLAGS =					-g3 -Wall -Wextra -Wcast-align -Wconversion -Werror 
 ifeq ($(OS), Darwin)
 	THREADS :=			$(shell sysctl -n hw.ncpu)
 else
@@ -27,7 +28,7 @@ endif
 FAST :=					-j$(THREADS)
 DYN_FLAG :=				-shared
 HEADERS :=				-I ./include/
-O_FLAG :=				-O2
+O_FLAG :=				-O0
 
 #	Directories
 OBJDIR :=				./build/
@@ -51,7 +52,7 @@ vpath %.c $(SRC_DIR)
 all: $(NAME)
 
 $(NAME): $(OBJECTS)
-	@$(CC) $(DYN_FLAG) $(FLAGS) $(O_FLAG) $(patsubst %.c,$(OBJDIR)%.o,$(notdir $(SRCS))) -o $@
+	@$(CC) $(DYN_FLAG) $(FLAGS)$(O_FLAG) $(patsubst %.c,$(OBJDIR)%.o,$(notdir $(SRCS))) -o $@
 	@printf  "\033[92m\033[1;32mCompiling -------------> \033[91m$(NAME)\033[0m:\033[0m%-13s\033[32m[✔]\033[0m\n"
 	@ln -s $@ $(SYMLINK)
 
@@ -62,12 +63,17 @@ $(OBJDIR):
 
 $(OBJDIR)%.o: %.c
 	@printf  "\033[1;92mCompiling $(NAME)\033[0m %-28s\033[32m[$<]\033[0m\n"
-	@$(CC) $(FLAGS) $(O_FLAG) $(HEADERS) -fpic -c $< -o $@
+	@$(CC) $(DEBUG)$(FLAGS)$(O_FLAG) $(HEADERS) -fpic -c $< -o $@
 	@printf "\033[A\033[2K"
 
 clean:
 	@/bin/rm -rf $(OBJDIR)
 	@printf  "\033[1;32mCleaning object files -> \033[91m$(NAME)\033[0m\033[1;32m:\033[0m%-13s\033[32m[✔]\033[0m\n"
+
+debug: CC := clang
+debug: DEBUG := -g3 -fsanitize=address -fno-omit-frame-pointer -fsanitize=undefined 
+debug: FLAGS :=
+debug: re
 
 fast:
 	@$(MAKE) --no-print-directory $(FAST)

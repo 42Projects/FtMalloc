@@ -4,7 +4,6 @@
 # include "malloc.h"
 # include "arenap.h"
 # include <errno.h>
-# include <sys/mman.h>
 
 # define CHUNKS_PER_POOL 100
 # define SIZE_TINY 256

@@ -6,8 +6,10 @@
 /* For abort. */
 # include <stdlib.h>
 
-# define previous_chunk_size(chunk) (chunk->prev_size & ~(1UL << ALLOC_CHUNK))
+# define is_main_pool(pool) (pool->size & (1UL << MAIN_POOL))
+# define previous_chunk_size(chunk) (chunk->prev_size & ~(1UL << USED_CHUNK))
 
-# define CHECK_MASK (~((1UL << (FLAG_THRESHOLD + 1)) - 1) & ~(1UL << ALLOC_CHUNK))
+# define SIZE_MASK ((1UL << (FLAG_THRESHOLD + 1)) - 1)
+# define CHECK_MASK ((~SIZE_MASK) & ~(1UL << USED_CHUNK))
 
 #endif /* __FREE_PRIVATE_H */

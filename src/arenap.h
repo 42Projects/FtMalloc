@@ -3,16 +3,17 @@
 
 # include <pthread.h>
 # include <stdbool.h>
+# include <sys/mman.h>
 
-# define chunk_is_allocated(chunk) (chunk->prev_size & (1UL << ALLOC_CHUNK))
+# define chunk_is_allocated(chunk) (chunk->prev_size & (1UL << USED_CHUNK))
 # define pool_type_match(pool, chunk_type) (pool->size & (1UL << chunk_type))
 
-# define M_ARENA_MAX 8
+# define M_ARENA_MAX 1
 # define FLAG_THRESHOLD 58
 
 enum					e_type {
 	MAIN_POOL = FLAG_THRESHOLD + 1,
-	ALLOC_CHUNK,
+	USED_CHUNK,
 	CHUNK_TYPE_TINY,
 	CHUNK_TYPE_SMALL,
 	CHUNK_TYPE_LARGE
@@ -45,10 +46,11 @@ typedef struct			s_arena {
 }						t_arena;
 
 typedef struct 			s_arena_data {
-	int 				arena_count;
+	_Atomic int 		arena_count;
 	t_arena				arenas[M_ARENA_MAX];
 }						t_arena_data;
 
 extern t_arena_data		*g_arena_data;
+extern pthread_mutex_t	g_main_arena_mutex;
 
 #endif /* __ARENA_PRIVATE_H */

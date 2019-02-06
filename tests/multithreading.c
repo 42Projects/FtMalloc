@@ -6,9 +6,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define NUM_THREAD 32
-#define FIRST_MALLOC_SIZE 10
-#define SECOND_MALLOC_SIZE 900
+#define NUM_THREAD 320
+#define FIRST_MALLOC_SIZE 1000
+#define SECOND_MALLOC_SIZE 1000000
 
 void	*g_array[NUM_THREAD];
 
@@ -18,7 +18,7 @@ static void
 
 //	__free(ret);
 
-	g_array[*(int *)info] = ret;
+//	g_array[*(int *)info] = ret;
 
 	pthread_exit(NULL);
 }
@@ -27,6 +27,8 @@ static void
 *second_call (void *info) {
 	void *ret = __malloc(SECOND_MALLOC_SIZE);
 
+//	__free(ret);
+
 //	printf("ret = %p\n", ret);
 
 	pthread_exit(NULL);
@@ -34,6 +36,7 @@ static void
 
 int
 main (void) {
+
 	pthread_t	th[NUM_THREAD];
 	pthread_t	th2[NUM_THREAD];
 	int			info[NUM_THREAD];
@@ -49,7 +52,6 @@ main (void) {
 	for (int k = 0; k < NUM_THREAD; k++) {
 		pthread_join(th[k], NULL);
 	}
-
 #if 0
 	bool success = true;
 	for (int k = 0; k < NUM_THREAD - 1; k++) {
