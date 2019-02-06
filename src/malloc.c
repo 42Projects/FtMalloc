@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 
-t_arena_data	*g_arena_data = NULL;
+t_arena_data		*g_arena_data = NULL;
 
 static inline void *
 user_area (t_alloc_chunk *chunk, size_t size, pthread_mutex_t *mutex) {
@@ -24,7 +24,7 @@ user_area (t_alloc_chunk *chunk, size_t size, pthread_mutex_t *mutex) {
 }
 
 static t_pool *
-create_new_pool (int type, int chunk_type, unsigned long size, long pagesize, pthread_mutex_t *mutex) {
+create_new_pool (int type, t_arena *arena, int chunk_type, unsigned long size, long pagesize, pthread_mutex_t *mutex) {
 
 	static unsigned long	headers_size = sizeof(t_pool) + sizeof(t_alloc_chunk) + sizeof(unsigned long);
 
@@ -52,6 +52,7 @@ create_new_pool (int type, int chunk_type, unsigned long size, long pagesize, pt
 	/* Keep track of the size and free size available. */
 	new_pool->size = mmap_size | (1UL << chunk_type);
 	new_pool->free_size = mmap_size - (size + headers_size);
+	new_pool->arena = arena;
 
 	if (type == MAIN_POOL) new_pool->size |= (1UL << MAIN_POOL);
 
@@ -65,7 +66,6 @@ __malloc (size_t size) {
 	static pthread_mutex_t	main_arena_mutex = PTHREAD_MUTEX_INITIALIZER,
 							new_arena_mutex = PTHREAD_MUTEX_INITIALIZER;
 	static t_arena_data		arena_data = { .arena_count = 0 };
-	bool					creator = false;
 	t_arena					*current_arena = NULL;
 	t_pool					*current_pool = NULL;
 
@@ -93,7 +93,7 @@ __malloc (size_t size) {
 	if (__builtin_expect(g_arena_data == NULL, 0)) {
 		pagesize = sysconf(_SC_PAGESIZE);
 
-		current_pool = create_new_pool(MAIN_POOL, chunk_type, size, pagesize, &main_arena_mutex);
+		current_pool = create_new_pool(MAIN_POOL, &arena_data.arenas[0], chunk_type, size, pagesize, &main_arena_mutex);
 		if (current_pool == MAP_FAILED) return NULL;
 
 		arena_data.arenas[0] = (t_arena){ .main_pool = current_pool };
@@ -127,9 +127,8 @@ __malloc (size_t size) {
 
 				if (arena_data.arena_count < M_ARENA_MAX) {
 					arena_index = arena_data.arena_count - 1;
-					current_arena = &arena_data.arenas[arena_index];
 					++arena_data.arena_count;
-					creator = true;
+					current_arena = NULL;
 					break;
 				} else {
 					pthread_mutex_unlock(&new_arena_mutex);
@@ -144,14 +143,15 @@ __malloc (size_t size) {
 	}
 
 	/* All arenas are occupied by other threads but M_ARENA_MAX isn't reached. Let's just create a new one. */
-	if (creator == true) {
+	if (current_arena == NULL) {
 
-		current_pool = create_new_pool(MAIN_POOL, chunk_type, size, pagesize, &new_arena_mutex);
+		current_arena = &arena_data.arenas[arena_index + 1];
+		current_pool = create_new_pool(MAIN_POOL, current_arena, chunk_type, size, pagesize, &new_arena_mutex);
 		if (current_pool == MAP_FAILED) return NULL;
 
 		arena_data.arenas[arena_index + 1] = (t_arena){ .main_pool = current_pool };
-		pthread_mutex_init(&arena_data.arenas[arena_index + 1].mutex, NULL);
-		pthread_mutex_lock(&arena_data.arenas[arena_index + 1].mutex);
+		pthread_mutex_init(&current_arena->mutex, NULL);
+		pthread_mutex_lock(&current_arena->mutex);
 		pthread_mutex_unlock(&new_arena_mutex);
 
 		return user_area((t_alloc_chunk *)current_pool->chunk, size, &arena_data.arenas[arena_index + 1].mutex);
@@ -163,6 +163,7 @@ __malloc (size_t size) {
 	*/
 
 	current_pool = current_arena->main_pool;
+
 	unsigned long required_size = size + sizeof(t_alloc_chunk);
 
 	/*
@@ -170,12 +171,12 @@ __malloc (size_t size) {
 	   the chunk type isn't large, as large chunks have their dedicated pool.
 	*/
 
-	if (chunk_type != CHUNK_TYPE_LARGE) {
+	if (current_pool != NULL && chunk_type != CHUNK_TYPE_LARGE) {
 
 		while (pool_type_match(current_pool, chunk_type) == 0 || current_pool->free_size < required_size) {
 
 			if (current_pool->right == NULL) {
-				creator = true;
+				current_pool = NULL;
 				break;
 			}
 
@@ -184,9 +185,9 @@ __malloc (size_t size) {
 	}
 
 	/* A suitable pool could not be found, we need to create one. */
-	if (chunk_type == CHUNK_TYPE_LARGE || creator == true) {
+	if (current_pool == NULL || chunk_type == CHUNK_TYPE_LARGE ) {
 
-		current_pool = create_new_pool(0, chunk_type, size, pagesize, &current_arena->mutex);
+		current_pool = create_new_pool(0, current_arena, chunk_type, size, pagesize, &current_arena->mutex);
 		if (current_pool == MAP_FAILED) return NULL;
 
 		/*
@@ -196,23 +197,28 @@ __malloc (size_t size) {
 		   chunks to it's right.
 		*/
 
-		t_pool	*main_pool = current_arena->main_pool,
-				*tmp = (chunk_type == CHUNK_TYPE_LARGE) ? main_pool->left : main_pool->right ;
+		t_pool	*main_pool = current_arena->main_pool;
 
-		/* Insert the new pool into the pool list. */
-		if (chunk_type == CHUNK_TYPE_LARGE) {
-			main_pool->left = current_pool;
-			current_pool->right = main_pool;
-			current_pool->left = tmp;
+		if (main_pool != NULL) {
+			t_pool *tmp = (chunk_type == CHUNK_TYPE_LARGE) ? main_pool->left : main_pool->right ;
 
-			if (tmp != NULL) tmp->right = current_pool;
+			/* Insert the new pool into the pool list. */
+			if (chunk_type == CHUNK_TYPE_LARGE) {
+				main_pool->left = current_pool;
+				current_pool->right = main_pool;
+				current_pool->left = tmp;
 
+				if (tmp != NULL) tmp->right = current_pool;
+
+			} else {
+				main_pool->right = current_pool;
+				current_pool->left = main_pool;
+				current_pool->right = tmp;
+
+				if (tmp != NULL) tmp->left = current_pool;
+			}
 		} else {
-			main_pool->right = current_pool;
-			current_pool->left = main_pool;
-			current_pool->right = tmp;
-
-			if (tmp != NULL) tmp->left = current_pool;
+			current_arena->main_pool = current_pool;
 		}
 
 		return user_area((t_alloc_chunk *)current_pool->chunk, size, &current_arena->mutex);

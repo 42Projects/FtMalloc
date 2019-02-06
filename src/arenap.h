@@ -2,7 +2,6 @@
 # define __ARENA_PRIVATE_H
 
 # include <pthread.h>
-# include <stdbool.h>
 # include <sys/mman.h>
 
 # define chunk_is_allocated(chunk) (chunk->prev_size & (1UL << USED_CHUNK))
@@ -35,8 +34,10 @@ typedef struct			s_alloc_chunk {
 typedef struct 			s_pool {
 	unsigned long		free_size;
 	unsigned long		size;
+	struct s_arena		*arena;
 	struct s_pool		*left;
 	struct s_pool		*right;
+	__uint64_t 			__padding;
 	__uint8_t			chunk[0];
 }						t_pool;
 
