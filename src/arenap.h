@@ -7,11 +7,10 @@
 # define chunk_is_allocated(chunk) (chunk->prev_size & (1UL << ALLOC_CHUNK))
 # define pool_type_match(pool, chunk_type) (pool->size & (1UL << chunk_type))
 
+# define M_ARENA_MAX 8
 # define FLAG_THRESHOLD 58
 
 enum					e_type {
-	ARENA,
-	POOL,
 	MAIN_POOL = FLAG_THRESHOLD + 1,
 	ALLOC_CHUNK,
 	CHUNK_TYPE_TINY,
@@ -42,13 +41,12 @@ typedef struct 			s_pool {
 
 typedef struct			s_arena {
 	pthread_mutex_t		mutex;
-	struct s_arena		*next;
-	__uint8_t			pool[0];
+	t_pool				*main_pool;
 }						t_arena;
 
 typedef struct 			s_arena_data {
-	t_arena				*main_arena;
-	__uint8_t 			arena_count;
+	int 				arena_count;
+	t_arena				arenas[M_ARENA_MAX];
 }						t_arena_data;
 
 extern t_arena_data		*g_arena_data;

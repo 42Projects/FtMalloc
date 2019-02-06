@@ -50,22 +50,23 @@ show_alloc_mem (void) {
 
 	char		 		buffer[BUFF_SIZE];
 	size_t 				offset = 0;
-	t_arena 			*arena = g_arena_data->main_arena;
 	t_pool 				*pool = NULL;
 	t_alloc_chunk		*chunk = NULL;
 
-	do {
+	for (int k = 0; k < g_arena_data->arena_count; k++) {
+		t_arena *arena = &g_arena_data->arenas[k];
+
 		buff_string("\n", buffer, &offset);
 
 		/* Display arena address. */
 		buff_string("\x1b[31mARENA AT ", buffer, &offset);
 		buff_number(16, (unsigned long)arena, buffer, &offset);
 
-		if (arena == g_arena_data->main_arena) buff_string(" (MAIN)", buffer, &offset);
+		if (k == 0) buff_string(" (MAIN)", buffer, &offset);
 
 		buff_string("\x1b[0m\n", buffer, &offset);
 
-		pool = (t_pool *)arena->pool;
+		pool = arena->main_pool;
 		if (pool_type_match(pool, CHUNK_TYPE_LARGE)) pool = pool->right;
 
 		while (pool != NULL) {
@@ -97,7 +98,7 @@ show_alloc_mem (void) {
 			pool = pool->right;
 		}
 
-		pool = (t_pool *)arena->pool;
+		pool = arena->main_pool;
 		if (pool_type_match(pool, CHUNK_TYPE_LARGE) == 0) pool = pool->left;
 
 		while (pool != NULL) {
@@ -115,11 +116,10 @@ show_alloc_mem (void) {
 
 			pool = pool->left;
 		}
-
-		arena = arena->next;
-	} while (arena != NULL && arena != g_arena_data->main_arena);
+	}
 
 	flush_buffer(buffer, &offset);
+
 };
 
 

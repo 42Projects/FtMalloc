@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define NUM_THREAD 100
-#define FIRST_MALLOC_SIZE 10000
+#define NUM_THREAD 32
+#define FIRST_MALLOC_SIZE 10
 #define SECOND_MALLOC_SIZE 900
 
 void	*g_array[NUM_THREAD];
@@ -16,7 +16,7 @@ static void
 *race_condition (void *info) {
 	void *ret = __malloc(FIRST_MALLOC_SIZE);
 
-	__free(ret);
+//	__free(ret);
 
 	g_array[*(int *)info] = ret;
 
@@ -49,6 +49,7 @@ main (void) {
 	for (int k = 0; k < NUM_THREAD; k++) {
 		pthread_join(th[k], NULL);
 	}
+
 #if 0
 	bool success = true;
 	for (int k = 0; k < NUM_THREAD - 1; k++) {
@@ -72,7 +73,7 @@ main (void) {
 		pthread_join(th2[k], NULL);
 	}
 
-//	show_alloc_mem();
+	show_alloc_mem();
 
 	return 0;
 }
