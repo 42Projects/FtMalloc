@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define NUM_THREAD 32
+#define NUM_THREAD 100
 #define FIRST_MALLOC_SIZE 10000
 #define SECOND_MALLOC_SIZE 900
 

@@ -20,21 +20,21 @@ enum					e_type {
 };
 
 typedef struct			s_free_chunk {
-	__uint64_t			prev_size;
-	__uint64_t			size;
+	unsigned long		prev_size;
+	unsigned long		size;
 	struct s_pool		*head;
 	struct s_free_chunk	*next;
 }						t_free_chunk;
 
 typedef struct			s_alloc_chunk {
-	__uint64_t			prev_size;
-	__uint64_t			size;
+	unsigned long		prev_size;
+	unsigned long		size;
 	__uint8_t			user_area[0];
 }						t_alloc_chunk;
 
 typedef struct 			s_pool {
-	__uint64_t 			free_size;
-	__uint64_t 			size;
+	unsigned long		free_size;
+	unsigned long		size;
 	struct s_pool		*left;
 	struct s_pool		*right;
 	__uint8_t			chunk[0];
@@ -46,6 +46,11 @@ typedef struct			s_arena {
 	__uint8_t			pool[0];
 }						t_arena;
 
-extern t_arena			*g_main_arena;
+typedef struct 			s_arena_data {
+	t_arena				*main_arena;
+	__uint8_t 			arena_count;
+}						t_arena_data;
+
+extern t_arena_data		*g_arena_data;
 
 #endif /* __ARENA_PRIVATE_H */

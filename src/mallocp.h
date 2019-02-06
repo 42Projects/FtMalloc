@@ -9,7 +9,7 @@
 # define CHUNKS_PER_POOL 100
 # define SIZE_TINY 256
 # define SIZE_SMALL 4096
-# define M_ARENA_MAX_DEFAULT 8
+# define M_ARENA_MAX_DEFAULT 1
 # define MEM_ALIGN 0xfUL
 
 #endif /* __MALLOC_PRIVATE_H */

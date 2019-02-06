@@ -18,7 +18,7 @@ buff_string (const char *s, char *buffer, size_t *offset) {
 }
 
 static void
-buff_number (int base, __uint64_t number, char *buffer, size_t *offset) {
+buff_number (int base, unsigned long number, char *buffer, size_t *offset) {
 	const char dec[10] = "0123456789";
 	const char hexa[16] = "0123456789abcdef";
 	char rev_buff[16];
@@ -46,11 +46,11 @@ buff_number (int base, __uint64_t number, char *buffer, size_t *offset) {
 void
 show_alloc_mem (void) {
 
-	if (g_main_arena == NULL) return;
+	if (g_arena_data == NULL) return;
 
 	char		 		buffer[BUFF_SIZE];
 	size_t 				offset = 0;
-	t_arena 			*arena = g_main_arena;
+	t_arena 			*arena = g_arena_data->main_arena;
 	t_pool 				*pool = NULL;
 	t_alloc_chunk		*chunk = NULL;
 
@@ -59,9 +59,9 @@ show_alloc_mem (void) {
 
 		/* Display arena address. */
 		buff_string("\x1b[31mARENA AT ", buffer, &offset);
-		buff_number(16, (__uint64_t)arena, buffer, &offset);
+		buff_number(16, (unsigned long)arena, buffer, &offset);
 
-		if (arena == g_main_arena) buff_string(" (MAIN)", buffer, &offset);
+		if (arena == g_arena_data->main_arena) buff_string(" (MAIN)", buffer, &offset);
 
 		buff_string("\x1b[0m\n", buffer, &offset);
 
@@ -76,15 +76,15 @@ show_alloc_mem (void) {
 				buff_string("\x1b[36mSMALL :\x1b[0m ", buffer, &offset);
 			}
 
-			buff_number(16, (__uint64_t)pool, buffer, &offset);
+			buff_number(16, (unsigned long)pool, buffer, &offset);
 			buff_string("\n", buffer, &offset);
 
 			chunk = (t_alloc_chunk *)pool->chunk;
 
 			while (1) {
-				buff_number(16, (__uint64_t)chunk->user_area, buffer, &offset);
+				buff_number(16, (unsigned long)chunk->user_area, buffer, &offset);
 				buff_string(" - ", buffer, &offset);
-				buff_number(16, (__uint64_t)(chunk->user_area + chunk->size), buffer, &offset);
+				buff_number(16, (unsigned long)(chunk->user_area + chunk->size), buffer, &offset);
 				buff_string(" : ", buffer, &offset);
 				buff_number(10, chunk->size, buffer, &offset);
 				buff_string(" bytes\n", buffer, &offset);
@@ -103,12 +103,12 @@ show_alloc_mem (void) {
 		while (pool != NULL) {
 
 			buff_string("\x1b[36mLARGE :\x1b[0m ", buffer, &offset);
-			buff_number(16, (__uint64_t)pool, buffer, &offset);
+			buff_number(16, (unsigned long)pool, buffer, &offset);
 			buff_string("\n", buffer, &offset);
 			chunk = (t_alloc_chunk *)pool->chunk;
-			buff_number(16, (__uint64_t)chunk->user_area, buffer, &offset);
+			buff_number(16, (unsigned long)chunk->user_area, buffer, &offset);
 			buff_string(" - ", buffer, &offset);
-			buff_number(16, (__uint64_t)(chunk->user_area + chunk->size), buffer, &offset);
+			buff_number(16, (unsigned long)(chunk->user_area + chunk->size), buffer, &offset);
 			buff_string(" : ", buffer, &offset);
 			buff_number(10, chunk->size, buffer, &offset);
 			buff_string(" bytes\n", buffer, &offset);
@@ -117,7 +117,7 @@ show_alloc_mem (void) {
 		}
 
 		arena = arena->next;
-	} while (arena != NULL && arena != g_main_arena);
+	} while (arena != NULL && arena != g_arena_data->main_arena);
 
 	flush_buffer(buffer, &offset);
 };
@@ -127,6 +127,6 @@ show_alloc_mem (void) {
 void
 show_alloc_mem_ex (void) {
 
-	if (g_main_arena == NULL) return;
+	if (g_arena_data == NULL) return;
 
 };
