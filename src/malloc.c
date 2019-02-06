@@ -126,6 +126,8 @@ __malloc (size_t size) {
 			if (pthread_mutex_trylock(&new_arena_mutex) == 0) {
 
 				if (arena_data.arena_count < M_ARENA_MAX) {
+					arena_index = arena_data.arena_count - 1;
+					current_arena = &arena_data.arenas[arena_index];
 					++arena_data.arena_count;
 					creator = true;
 					break;

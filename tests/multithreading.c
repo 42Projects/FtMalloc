@@ -6,9 +6,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define NUM_THREAD 320
-#define FIRST_MALLOC_SIZE 1000
-#define SECOND_MALLOC_SIZE 1000000
+#define NUM_THREAD 32000
+#define FIRST_MALLOC_SIZE 100000
+#define SECOND_MALLOC_SIZE 100000
 
 void	*g_array[NUM_THREAD];
 
@@ -75,7 +75,7 @@ main (void) {
 		pthread_join(th2[k], NULL);
 	}
 
-	show_alloc_mem();
+//	show_alloc_mem();
 
 	return 0;
 }

@@ -8,6 +8,8 @@ void
 __free (void *ptr) {
 
 	static unsigned long	headers_size = sizeof(t_pool) + sizeof(t_alloc_chunk) + sizeof(unsigned long);
+	static pthread_mutex_t	arena_search_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 
 	if (ptr == NULL)
 		return;
@@ -33,6 +35,8 @@ __free (void *ptr) {
 			(t_pool *)((unsigned long)chunk - sizeof(t_pool));
 
 	/* Backtrack to the arena and lock it. */
+	pthread_mutex_lock(&arena_search_mutex);
+
 	t_pool *main_pool = pool;
 	while ((main_pool->size & (1UL << MAIN_POOL)) == 0) {
 		main_pool = (pool_type_match(main_pool, CHUNK_TYPE_LARGE)) ? main_pool->right : main_pool->left;
@@ -82,5 +86,6 @@ __free (void *ptr) {
 		munmap(pool, pool->size);
 	}
 
+	pthread_mutex_unlock(&arena_search_mutex);
 	pthread_mutex_unlock(&arena->mutex);
 }
