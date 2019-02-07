@@ -7,7 +7,7 @@
 # define chunk_is_allocated(chunk) (chunk->prev_size & (1UL << USED_CHUNK))
 # define pool_type_match(pool, chunk_type) (pool->size & (1UL << chunk_type))
 
-# define M_ARENA_MAX 8
+# define M_ARENA_MAX 1
 # define FLAG_THRESHOLD 58
 
 enum					e_type {
@@ -27,7 +27,7 @@ typedef struct			s_free_chunk {
 typedef struct			s_alloc_chunk {
 	unsigned long		prev_size;
 	unsigned long		size;
-	__uint8_t			user_area[0];
+	void				*user_area[0];
 }						t_alloc_chunk;
 
 typedef struct 			s_pool {
@@ -37,7 +37,7 @@ typedef struct 			s_pool {
 	struct s_pool		*left;
 	struct s_pool		*right;
 	__uint64_t 			__padding;
-	__uint8_t			chunk[0];
+	t_alloc_chunk		*chunk[0];
 }						t_pool;
 
 typedef struct			s_arena {
@@ -51,5 +51,6 @@ typedef struct 			s_arena_data {
 }						t_arena_data;
 
 extern t_arena_data		*g_arena_data;
+extern pthread_mutex_t	g_pool_mutex;
 
 #endif /* __ARENA_PRIVATE_H */

@@ -3,6 +3,7 @@
 
 
 t_arena_data		*g_arena_data = NULL;
+pthread_mutex_t		g_pool_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static inline void *
 user_area (t_alloc_chunk *chunk, int chunk_type, size_t size, pthread_mutex_t *mutex) {
@@ -25,6 +26,7 @@ user_area (t_alloc_chunk *chunk, int chunk_type, size_t size, pthread_mutex_t *m
 	chunk->prev_size |= 1UL << USED_CHUNK;
 
 	pthread_mutex_unlock(mutex);
+
 	return (void *)chunk->user_area;
 }
 
@@ -41,7 +43,7 @@ create_new_pool (int type, t_arena *arena, int chunk_type, unsigned long size, l
 
 	unsigned long mmap_size = size + headers_size;
 	if (chunk_type != CHUNK_TYPE_LARGE) {
-		mmap_size = CHUNKS_PER_POOL * (chunk_type == CHUNK_TYPE_TINY) ? SIZE_TINY : SIZE_SMALL;
+		mmap_size = CHUNKS_PER_POOL * (unsigned long)(chunk_type == CHUNK_TYPE_TINY ? SIZE_TINY : SIZE_SMALL);
 		mmap_size += headers_size + sizeof(t_alloc_chunk) * (CHUNKS_PER_POOL - 1);
 	}
 
@@ -110,13 +112,10 @@ __malloc (size_t size) {
 		pthread_mutex_init(&arena_data.arenas[0].mutex, NULL);
 		pthread_mutex_lock(&arena_data.arenas[0].mutex);
 		g_arena_data = &arena_data;
-		pthread_mutex_unlock(&main_arena_mutex);
 
+		pthread_mutex_unlock(&main_arena_mutex);
 		return user_area((t_alloc_chunk *)current_pool->chunk, chunk_type, size, &arena_data.arenas[0].mutex);
 	}
-
-	/* Main arena exists, we can proceed. */
-	pthread_mutex_unlock(&main_arena_mutex);
 
 	/*
 	   In order to prevent threads to compete for the same memory area, multiple arenas can be created to allow
@@ -124,6 +123,8 @@ __malloc (size_t size) {
 	   thread to operate independently. If M_ARENA_MAX is reached, threads will loop over all arenas until one
 	   is available.
 	*/
+
+	pthread_mutex_unlock(&main_arena_mutex);
 
 	/* Look for an open arena. */
 	current_arena = &arena_data.arenas[0];
@@ -161,8 +162,8 @@ __malloc (size_t size) {
 		arena_data.arenas[arena_index + 1] = (t_arena){ .main_pool = current_pool };
 		pthread_mutex_init(&current_arena->mutex, NULL);
 		pthread_mutex_lock(&current_arena->mutex);
-		pthread_mutex_unlock(&new_arena_mutex);
 
+		pthread_mutex_unlock(&new_arena_mutex);
 		return user_area((t_alloc_chunk *)current_pool->chunk, chunk_type, size, &arena_data.arenas[arena_index + 1].mutex);
 	}
 
