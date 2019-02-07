@@ -7,7 +7,7 @@
 void
 __free (void *ptr) {
 
-	static unsigned long	headers_size = sizeof(t_pool) + sizeof(t_alloc_chunk) + sizeof(unsigned long);
+	static unsigned long	headers_size = sizeof(t_pool) + sizeof(unsigned long);
 
 
 	if (ptr == NULL)
@@ -35,15 +35,12 @@ __free (void *ptr) {
 
 	/* Backtrack to the arena and lock it. */
 	t_arena *arena = pool->arena;
-
 	pthread_mutex_lock(&arena->mutex);
 
-	if (pool_type_match(pool, CHUNK_TYPE_LARGE) == 0) {
-		//TODO
-	}
+	/* We return the memory space to the pool free size. If the pool is empty, we unmap it. */
+	pool->free_size += chunk->size + sizeof(t_alloc_chunk);
 
-	/* If pool is empty, return memory to system. */
-	if ((pool->free_size + chunk->size + headers_size) == (pool->size & SIZE_MASK)) {
+	if ((pool->free_size + headers_size) == (pool->size & SIZE_MASK)) {
 
 		if (is_main_pool(pool)) {
 
@@ -63,6 +60,12 @@ __free (void *ptr) {
 		if (pool->right != NULL) pool->right->left = pool->left;
 
 		munmap(pool, pool->size);
+	} else if (pool_type_match(pool, CHUNK_TYPE_LARGE) == 0) {
+
+		/* Otherwise, we attach the freed chunk to the pool free chunks list, and we populate t_free_chunk. */
+		chunk->prev_size &= ~(1UL << USED_CHUNK);
+		((t_free_chunk *)chunk)->head = pool;
+//		((t_free_chunk *)chunk)->next = pool->
 	}
 
 	pthread_mutex_unlock(&arena->mutex);

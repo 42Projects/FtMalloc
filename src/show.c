@@ -85,12 +85,12 @@ show_alloc_mem (void) {
 			while (1) {
 				buff_number(16, (unsigned long)chunk->user_area, buffer, &offset);
 				buff_string(" - ", buffer, &offset);
-				buff_number(16, (unsigned long)(chunk->user_area + chunk->size), buffer, &offset);
+				buff_number(16, (unsigned long)chunk + chunk->size, buffer, &offset);
 				buff_string(" : ", buffer, &offset);
-				buff_number(10, chunk->size, buffer, &offset);
+				buff_number(10, chunk->size - sizeof(t_alloc_chunk), buffer, &offset);
 				buff_string(" bytes\n", buffer, &offset);
 
-				chunk = (t_alloc_chunk *)(chunk->user_area + chunk->size);
+				chunk = (t_alloc_chunk *)((unsigned long)chunk + chunk->size);
 
 				if (chunk_is_allocated(chunk) == 0) break;
 			}
@@ -109,9 +109,9 @@ show_alloc_mem (void) {
 			chunk = (t_alloc_chunk *)pool->chunk;
 			buff_number(16, (unsigned long)chunk->user_area, buffer, &offset);
 			buff_string(" - ", buffer, &offset);
-			buff_number(16, (unsigned long)(chunk->user_area + chunk->size), buffer, &offset);
+			buff_number(16, (unsigned long)chunk + chunk->size, buffer, &offset);
 			buff_string(" : ", buffer, &offset);
-			buff_number(10, chunk->size, buffer, &offset);
+			buff_number(10, chunk->size - sizeof(t_alloc_chunk), buffer, &offset);
 			buff_string(" bytes\n", buffer, &offset);
 
 			pool = pool->left;

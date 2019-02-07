@@ -6,19 +6,17 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define NUM_THREAD 32000
+#define NUM_THREAD 3000
 #define FIRST_MALLOC_SIZE 10000
-#define SECOND_MALLOC_SIZE 10
+#define SECOND_MALLOC_SIZE 1000
 
 void	*g_array[NUM_THREAD];
 
 static void
 *race_condition (void *info) {
-	void *ret = __malloc(FIRST_MALLOC_SIZE);
+	*(void **)info = __malloc(FIRST_MALLOC_SIZE);
 
-	__free(ret);
-
-//	*(void **)info = ret;
+	__free(*(void **)info);
 
 //	g_array[*(int *)info] = ret;
 
@@ -27,7 +25,7 @@ static void
 
 static void
 *second_call (void *info) {
-	void *ret = __malloc(SECOND_MALLOC_SIZE);
+//	void *ret = __malloc(SECOND_MALLOC_SIZE);
 
 	__free(*(void **)info);
 
@@ -53,7 +51,7 @@ main (void) {
 	for (int k = 0; k < NUM_THREAD; k++) {
 		pthread_join(th[k], NULL);
 	}
-#if 0
+
 	/* Test 2 */
 	printf("Second batch of threads is calling malloc of data %d...\n", SECOND_MALLOC_SIZE);
 	for (int k = 0; k < NUM_THREAD; k++) {
@@ -62,7 +60,7 @@ main (void) {
 	for (int k = 0; k < NUM_THREAD; k++) {
 		pthread_join(th2[k], NULL);
 	}
-#endif
+
 //	show_alloc_mem();
 
 	return 0;

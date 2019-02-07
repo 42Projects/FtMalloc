@@ -22,7 +22,6 @@ typedef struct			s_free_chunk {
 	unsigned long		prev_size;
 	unsigned long		size;
 	struct s_pool		*head;
-	struct s_free_chunk	*next;
 }						t_free_chunk;
 
 typedef struct			s_alloc_chunk {
