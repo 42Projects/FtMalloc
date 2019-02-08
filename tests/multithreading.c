@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define NUM_THREAD 32000
-#define FIRST_MALLOC_SIZE 44000
+#define NUM_THREAD 12000
+#define FIRST_MALLOC_SIZE 4400
 #define SECOND_MALLOC_SIZE 4960
 
 void	*g_array[NUM_THREAD];
@@ -16,7 +16,7 @@ static void
 *race_condition (void *info) {
 	*(void **)info = __malloc(FIRST_MALLOC_SIZE);
 
-	__free(*(void **)info);
+//	__free(*(void **)info);
 
 //	g_array[*(int *)info] = ret;
 
@@ -27,7 +27,7 @@ static void
 *second_call (void *info) {
 //	void *ret = __malloc(SECOND_MALLOC_SIZE);
 
-//	__free(*(void **)info);
+	__free(*(void **)info);
 
 //	printf("ret = %p\n", ret);
 

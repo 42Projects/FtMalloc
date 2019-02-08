@@ -1,6 +1,7 @@
 #include "arenap.h"
 #include "freep.h"
 #include <stdio.h>
+#include <string.h>
 
 
 t_pool *
@@ -77,7 +78,7 @@ __free (void *ptr) {
 
 	if (ptr == NULL) return;
 
-	t_chunk *chunk = (t_chunk *)((unsigned long)ptr - sizeof(t_chunk));
+	t_chunk *chunk = (t_chunk *) ((unsigned long) ptr - sizeof(t_chunk));
 	t_pool *pool = check_valid_pointer(chunk);
 	t_arena *arena = pool->arena;
 
@@ -86,9 +87,13 @@ __free (void *ptr) {
 
 	if ((pool->free_size + sizeof(t_pool)) == (pool->size & SIZE_MASK)) {
 
-		if (pool_type_match(pool, CHUNK_TYPE_LARGE) && is_main_pool(pool)) {
+		if (is_main_pool(pool)) {
 
-			//TODO change pool type
+//			pool->size &= ~(1UL << CHUNK_TYPE_LARGE);
+//			pool->size |= 1UL << CHUNK_TYPE_TINY; //TODO change
+			pool->chunk->size = pool->free_size;
+			pool->chunk->prev_size = 0;
+			memset(pool->chunk->user_area, 0, pool->free_size - sizeof(t_chunk));
 
 		} else {
 
@@ -100,8 +105,13 @@ __free (void *ptr) {
 
 	} else {
 
-		/* Otherwise, we populate t_free_chunk. */
-		chunk->prev_size &= ~(1UL << USED_CHUNK);
+//		chunk->prev_size &= ~(1UL << USED_CHUNK);
+
+		/* Try to defragment memory. */
+//		t_chunk *next_chunk = (t_chunk *)((unsigned long)chunk + chunk->size);
+//		if ()
+
+		memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
 	}
 
 	pthread_mutex_unlock(&arena->mutex);
