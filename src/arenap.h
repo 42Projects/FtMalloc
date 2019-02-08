@@ -4,10 +4,7 @@
 # include <pthread.h>
 # include <sys/mman.h>
 
-# define chunk_is_allocated(chunk) (chunk->prev_size & (1UL << USED_CHUNK))
-# define pool_type_match(pool, chunk_type) (pool->size & (1UL << chunk_type))
-
-# define M_ARENA_MAX 1
+# define M_ARENA_MAX 8
 # define FLAG_THRESHOLD 58
 
 enum					e_type {
@@ -18,17 +15,17 @@ enum					e_type {
 	CHUNK_TYPE_LARGE
 };
 
-typedef struct			s_free_chunk {
-	unsigned long		prev_size;
-	unsigned long		size;
-	struct s_pool		*head;
-}						t_free_chunk;
+# define SIZE_MASK ((1UL << (FLAG_THRESHOLD + 1)) - 1)
 
-typedef struct			s_alloc_chunk {
+# define chunk_is_allocated(chunk) (chunk->prev_size & (1UL << USED_CHUNK))
+# define pool_end(pool) ((void *)((unsigned long)pool + (pool->size & SIZE_MASK)))
+# define pool_type_match(pool, chunk_type) (pool->size & (1UL << chunk_type))
+
+typedef struct			s_chunk {
 	unsigned long		prev_size;
 	unsigned long		size;
 	void				*user_area[0];
-}						t_alloc_chunk;
+}						t_chunk;
 
 typedef struct 			s_pool {
 	unsigned long		free_size;
@@ -37,7 +34,7 @@ typedef struct 			s_pool {
 	struct s_pool		*left;
 	struct s_pool		*right;
 	__uint64_t 			__padding;
-	t_alloc_chunk		*chunk[0];
+	t_chunk				chunk[0];
 }						t_pool;
 
 typedef struct			s_arena {
@@ -51,6 +48,5 @@ typedef struct 			s_arena_data {
 }						t_arena_data;
 
 extern t_arena_data		*g_arena_data;
-extern pthread_mutex_t	g_pool_mutex;
 
 #endif /* __ARENA_PRIVATE_H */

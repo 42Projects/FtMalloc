@@ -28,7 +28,7 @@ endif
 FAST :=					-j$(THREADS)
 DYN_FLAG :=				-shared
 HEADERS :=				-I ./include/
-O_FLAG :=				-O0
+O_FLAG :=				-O3
 
 #	Directories
 OBJDIR :=				./build/

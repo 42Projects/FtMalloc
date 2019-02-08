@@ -1,7 +1,6 @@
 #include "showp.h"
 
 
-
 static inline void
 flush_buffer (char *buffer, size_t *offset) {
 	buffer[*offset] = '\0';
@@ -41,17 +40,16 @@ buff_number (int base, unsigned long number, char *buffer, size_t *offset) {
 	if (*offset == BUFF_SIZE - 1) flush_buffer(buffer, offset);
 }
 
-
-
 void
 show_alloc_mem (void) {
 
-	if (g_arena_data == NULL) return;
+	char		 			buffer[BUFF_SIZE];
+	size_t 					offset = 0;
+	t_pool 					*pool = NULL;
+	t_chunk					*chunk = NULL;
 
-	char		 		buffer[BUFF_SIZE];
-	size_t 				offset = 0;
-	t_pool 				*pool = NULL;
-	t_alloc_chunk		*chunk = NULL;
+
+	if (g_arena_data == NULL) return;
 
 	for (int k = 0; k < g_arena_data->arena_count; k++) {
 		t_arena *arena = &g_arena_data->arenas[k];
@@ -80,17 +78,17 @@ show_alloc_mem (void) {
 			buff_number(16, (unsigned long)pool, buffer, &offset);
 			buff_string("\n", buffer, &offset);
 
-			chunk = (t_alloc_chunk *)pool->chunk;
+			chunk = pool->chunk;
 
 			while (1) {
 				buff_number(16, (unsigned long)chunk->user_area, buffer, &offset);
 				buff_string(" - ", buffer, &offset);
 				buff_number(16, (unsigned long)chunk + chunk->size, buffer, &offset);
 				buff_string(" : ", buffer, &offset);
-				buff_number(10, chunk->size - sizeof(t_alloc_chunk), buffer, &offset);
+				buff_number(10, chunk->size - sizeof(t_chunk), buffer, &offset);
 				buff_string(" bytes\n", buffer, &offset);
 
-				chunk = (t_alloc_chunk *)((unsigned long)chunk + chunk->size);
+				chunk = (t_chunk *)((unsigned long)chunk + chunk->size);
 
 				if (chunk_is_allocated(chunk) == 0) break;
 			}
@@ -106,12 +104,12 @@ show_alloc_mem (void) {
 			buff_string("\x1b[36mLARGE :\x1b[0m ", buffer, &offset);
 			buff_number(16, (unsigned long)pool, buffer, &offset);
 			buff_string("\n", buffer, &offset);
-			chunk = (t_alloc_chunk *)pool->chunk;
+			chunk = pool->chunk;
 			buff_number(16, (unsigned long)chunk->user_area, buffer, &offset);
 			buff_string(" - ", buffer, &offset);
 			buff_number(16, (unsigned long)chunk + chunk->size, buffer, &offset);
 			buff_string(" : ", buffer, &offset);
-			buff_number(10, chunk->size - sizeof(t_alloc_chunk), buffer, &offset);
+			buff_number(10, chunk->size - sizeof(t_chunk), buffer, &offset);
 			buff_string(" bytes\n", buffer, &offset);
 
 			pool = pool->left;
@@ -119,10 +117,7 @@ show_alloc_mem (void) {
 	}
 
 	flush_buffer(buffer, &offset);
-
 };
-
-
 
 void
 show_alloc_mem_ex (void) {

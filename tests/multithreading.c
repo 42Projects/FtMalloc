@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define NUM_THREAD 3200
-#define FIRST_MALLOC_SIZE 5000
+#define NUM_THREAD 32000
+#define FIRST_MALLOC_SIZE 44000
 #define SECOND_MALLOC_SIZE 4960
 
 void	*g_array[NUM_THREAD];
@@ -51,7 +51,7 @@ main (void) {
 	for (int k = 0; k < NUM_THREAD; k++) {
 		pthread_join(th[k], NULL);
 	}
-#if 0
+
 	/* Test 2 */
 	printf("Second batch of threads is calling malloc of data %d...\n", SECOND_MALLOC_SIZE);
 	for (int k = 0; k < NUM_THREAD; k++) {
@@ -60,8 +60,8 @@ main (void) {
 	for (int k = 0; k < NUM_THREAD; k++) {
 		pthread_join(th2[k], NULL);
 	}
-#endif
-	show_alloc_mem();
+
+//	show_alloc_mem();
 
 	return 0;
 }
