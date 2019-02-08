@@ -18,6 +18,7 @@ enum					e_type {
 # define SIZE_MASK ((1UL << (FLAG_THRESHOLD + 1)) - 1)
 
 # define chunk_is_allocated(chunk) (chunk->prev_size & (1UL << USED_CHUNK))
+# define next_chunk(chunk) ((t_chunk *)((unsigned long)chunk + chunk->size))
 # define pool_end(pool) ((void *)((unsigned long)pool + (pool->size & SIZE_MASK)))
 # define pool_type_match(pool, chunk_type) (pool->size & (1UL << chunk_type))
 
@@ -30,10 +31,10 @@ typedef struct			s_chunk {
 typedef struct 			s_pool {
 	unsigned long		free_size;
 	unsigned long		size;
+	unsigned long		biggest_chunk;
 	struct s_arena		*arena;
 	struct s_pool		*left;
 	struct s_pool		*right;
-	__uint64_t 			__padding;
 	t_chunk				chunk[0];
 }						t_pool;
 

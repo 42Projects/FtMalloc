@@ -39,7 +39,7 @@ buff_number (int base, unsigned long number, char *buffer, size_t *offset) {
 
 	if (*offset == BUFF_SIZE - 1) flush_buffer(buffer, offset);
 }
-
+#include <stdio.h>
 void
 show_alloc_mem (void) {
 
@@ -64,9 +64,7 @@ show_alloc_mem (void) {
 
 		buff_string("\x1b[0m\n", buffer, &offset);
 
-		pool = arena->main_pool;
-		if (pool_type_match(pool, CHUNK_TYPE_LARGE)) pool = pool->right;
-
+		pool = (pool_type_match(arena->main_pool, CHUNK_TYPE_LARGE)) ? arena->main_pool->right : arena->main_pool;
 		while (pool != NULL) {
 
 			if (pool_type_match(pool, CHUNK_TYPE_TINY)) {
@@ -80,25 +78,24 @@ show_alloc_mem (void) {
 
 			chunk = pool->chunk;
 
-			while (1) {
-				buff_number(16, (unsigned long)chunk->user_area, buffer, &offset);
-				buff_string(" - ", buffer, &offset);
-				buff_number(16, (unsigned long)chunk + chunk->size, buffer, &offset);
-				buff_string(" : ", buffer, &offset);
-				buff_number(10, chunk->size - sizeof(t_chunk), buffer, &offset);
-				buff_string(" bytes\n", buffer, &offset);
+			while (chunk != pool_end(pool)) {
 
-				chunk = (t_chunk *)((unsigned long)chunk + chunk->size);
+				if (chunk_is_allocated(chunk)) {
+					buff_number(16, (unsigned long)chunk->user_area, buffer, &offset);
+					buff_string(" - ", buffer, &offset);
+					buff_number(16, (unsigned long)chunk + chunk->size, buffer, &offset);
+					buff_string(" : ", buffer, &offset);
+					buff_number(10, chunk->size - sizeof(t_chunk), buffer, &offset);
+					buff_string(" bytes\n", buffer, &offset);
+				}
 
-				if (chunk_is_allocated(chunk) == 0) break;
+				chunk = next_chunk(chunk);
 			}
 
 			pool = pool->right;
 		}
 
-		pool = arena->main_pool;
-		if (pool_type_match(pool, CHUNK_TYPE_LARGE) == 0) pool = pool->left;
-
+		pool = (pool_type_match(arena->main_pool, CHUNK_TYPE_LARGE)) ? arena->main_pool : arena->main_pool->left;
 		while (pool != NULL) {
 
 			buff_string("\x1b[36mLARGE :\x1b[0m ", buffer, &offset);

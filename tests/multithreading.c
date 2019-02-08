@@ -6,14 +6,15 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define NUM_THREAD 12000
-#define FIRST_MALLOC_SIZE 4400
+#define NUM_THREAD 32000
+#define FIRST_MALLOC_SIZE 440
 #define SECOND_MALLOC_SIZE 4960
 
 void	*g_array[NUM_THREAD];
 
 static void
 *race_condition (void *info) {
+
 	*(void **)info = __malloc(FIRST_MALLOC_SIZE);
 
 //	__free(*(void **)info);
@@ -25,9 +26,22 @@ static void
 
 static void
 *second_call (void *info) {
-//	void *ret = __malloc(SECOND_MALLOC_SIZE);
 
-	__free(*(void **)info);
+	void *ret = __malloc(SECOND_MALLOC_SIZE);
+
+//	__free(*(void **)info);
+
+//	__free(ret);
+
+	void *ptr = __malloc(1230);
+	void *ptr2 = __malloc(123);
+	void *ptr3 = __malloc(130);
+	void *ptr4 = __malloc(23);
+	void *ptr5 = __malloc(12);
+	void *ptr6 = __malloc(10);
+	void *ptr7 = __malloc(120);
+	void *ptr8 = __malloc(30);
+	void *ptr9 = __malloc(230);
 
 //	printf("ret = %p\n", ret);
 
@@ -60,6 +74,8 @@ main (void) {
 	for (int k = 0; k < NUM_THREAD; k++) {
 		pthread_join(th2[k], NULL);
 	}
+
+//	printf("T\n");
 
 //	show_alloc_mem();
 

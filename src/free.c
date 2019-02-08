@@ -30,7 +30,7 @@ check_valid_pointer (t_chunk *chunk) {
 
 			if ((void *)chunk > (void *)check_pool && (void *)chunk < pool_end(check_pool)) {
 				pool = check_pool;
-				goto FOUND;
+				goto OUT;
 			}
 
 			check_pool = check_pool->right;
@@ -41,7 +41,7 @@ check_valid_pointer (t_chunk *chunk) {
 
 			if ((void *)chunk > (void *)check_pool && (void *)chunk < pool_end(check_pool)) {
 				pool = check_pool;
-				goto FOUND;
+				goto OUT;
 			}
 
 			check_pool = check_pool->left;
@@ -50,22 +50,29 @@ check_valid_pointer (t_chunk *chunk) {
 		pthread_mutex_unlock(&arena->mutex);
 	}
 
-	FOUND:
+//	printf("TEST\n");
+
+	OUT:
 	if (pool != NULL) {
 
 		/* Chunk is in a pool, but we still need to check that it actually is a valid chunk header. */
 		check_chunk = pool->chunk;
-		while ((void *)check_chunk != pool_end(pool)) {
+
+//		printf("CHUNK = %p\n", chunk);
+
+		while (check_chunk != pool_end(pool)) {
+
+//			printf("CHECK_CHUNK = %p\n", check_chunk);
 
 			if (chunk == check_chunk) {
 
-				if (chunk_is_allocated(chunk)) return pool;
+				if (chunk_is_allocated(check_chunk)) return pool;
 
 				(void)(write(STDERR_FILENO, "free(): double free or unallocated pointer\n", 43) + 1);
 				abort();
 			}
 
-			check_chunk = (t_chunk *)((unsigned long) check_chunk + check_chunk->size);
+			check_chunk = next_chunk(check_chunk);
 		}
 	}
 
@@ -78,7 +85,7 @@ __free (void *ptr) {
 
 	if (ptr == NULL) return;
 
-	t_chunk *chunk = (t_chunk *) ((unsigned long) ptr - sizeof(t_chunk));
+	t_chunk *chunk = (t_chunk *) ((unsigned long)ptr - sizeof(t_chunk));
 	t_pool *pool = check_valid_pointer(chunk);
 	t_arena *arena = pool->arena;
 
@@ -89,10 +96,13 @@ __free (void *ptr) {
 
 		if (is_main_pool(pool)) {
 
-//			pool->size &= ~(1UL << CHUNK_TYPE_LARGE);
-//			pool->size |= 1UL << CHUNK_TYPE_TINY; //TODO change
+			if  (pool_type_match(pool, CHUNK_TYPE_LARGE)) {
+				//TODO change
+			}
+
 			pool->chunk->size = pool->free_size;
-			pool->chunk->prev_size = 0;
+			pool->chunk->prev_size = 0UL;
+
 			memset(pool->chunk->user_area, 0, pool->free_size - sizeof(t_chunk));
 
 		} else {
@@ -105,7 +115,7 @@ __free (void *ptr) {
 
 	} else {
 
-//		chunk->prev_size &= ~(1UL << USED_CHUNK);
+		chunk->prev_size &= ~(1UL << USED_CHUNK);
 
 		/* Try to defragment memory. */
 //		t_chunk *next_chunk = (t_chunk *)((unsigned long)chunk + chunk->size);
