@@ -83,7 +83,7 @@ show_alloc_mem (void) {
 				if (chunk_is_allocated(chunk)) {
 					buff_number(16, (unsigned long)chunk->user_area, buffer, &offset);
 					buff_string(" - ", buffer, &offset);
-					buff_number(16, (unsigned long)chunk + chunk->size, buffer, &offset);
+					buff_number(16, (unsigned long)next_chunk(chunk), buffer, &offset);
 					buff_string(" : ", buffer, &offset);
 					buff_number(10, chunk->size - sizeof(t_chunk), buffer, &offset);
 					buff_string(" bytes\n", buffer, &offset);
@@ -104,7 +104,7 @@ show_alloc_mem (void) {
 			chunk = pool->chunk;
 			buff_number(16, (unsigned long)chunk->user_area, buffer, &offset);
 			buff_string(" - ", buffer, &offset);
-			buff_number(16, (unsigned long)chunk + chunk->size, buffer, &offset);
+			buff_number(16, (unsigned long)next_chunk(chunk), buffer, &offset);
 			buff_string(" : ", buffer, &offset);
 			buff_number(10, chunk->size - sizeof(t_chunk), buffer, &offset);
 			buff_string(" bytes\n", buffer, &offset);

@@ -4,80 +4,17 @@
 #include <string.h>
 
 
-t_pool *
-check_valid_pointer (t_chunk *chunk) {
+static inline t_pool *
+find_pool (t_chunk *chunk) {
 
-	/* If the pointer is not aligned on a 16bytes boundary, it is invalid by definition. */
-	if ((unsigned long)chunk % 16UL != 0) {
-		(void)(write(STDERR_FILENO, "free(): invalid pointer\n", 24) + 1);
-		abort();
+	while ((chunk->prev_size & SIZE_MASK) != 0) {
+		chunk = (t_chunk *)((unsigned long)chunk - (chunk->prev_size & SIZE_MASK));
 	}
 
-	/*
-	   Go through arenas in order to find the chunk. The process is slow, but it will prevent us from reading memory
-	   that doesn't belong to the program.
-	*/
+	t_pool *pool = (t_pool *)((unsigned long)chunk - sizeof(t_pool));
+	pthread_mutex_lock(&pool->arena->mutex);
 
-	t_pool *pool = NULL;
-	t_chunk *check_chunk = NULL;
-	for (int k = 0; k < g_arena_data->arena_count; k++) {
-		t_arena *arena = &g_arena_data->arenas[k];
-		pthread_mutex_lock(&arena->mutex);
-
-		/* We start by checking the pools of size tiny and small as there should be less of them on an average case. */
-		t_pool *check_pool = arena->main_pool;
-		while (check_pool != NULL) {
-
-			if ((void *)chunk > (void *)check_pool && (void *)chunk < pool_end(check_pool)) {
-				pool = check_pool;
-				goto OUT;
-			}
-
-			check_pool = check_pool->right;
-		}
-
-		check_pool = arena->main_pool->left;
-		while (check_pool != NULL) {
-
-			if ((void *)chunk > (void *)check_pool && (void *)chunk < pool_end(check_pool)) {
-				pool = check_pool;
-				goto OUT;
-			}
-
-			check_pool = check_pool->left;
-		}
-
-		pthread_mutex_unlock(&arena->mutex);
-	}
-
-//	printf("TEST\n");
-
-	OUT:
-	if (pool != NULL) {
-
-		/* Chunk is in a pool, but we still need to check that it actually is a valid chunk header. */
-		check_chunk = pool->chunk;
-
-//		printf("CHUNK = %p\n", chunk);
-
-		while (check_chunk != pool_end(pool)) {
-
-//			printf("CHECK_CHUNK = %p\n", check_chunk);
-
-			if (chunk == check_chunk) {
-
-				if (chunk_is_allocated(check_chunk)) return pool;
-
-				(void)(write(STDERR_FILENO, "free(): double free or unallocated pointer\n", 43) + 1);
-				abort();
-			}
-
-			check_chunk = next_chunk(check_chunk);
-		}
-	}
-
-	(void)(write(STDERR_FILENO, "free(): invalid pointer\n", 24) + 1);
-	abort();
+	return pool;
 }
 
 void
@@ -85,8 +22,15 @@ __free (void *ptr) {
 
 	if (ptr == NULL) return;
 
-	t_chunk *chunk = (t_chunk *) ((unsigned long)ptr - sizeof(t_chunk));
-	t_pool *pool = check_valid_pointer(chunk);
+	t_chunk *chunk = (t_chunk *)((unsigned long)ptr - sizeof(t_chunk));
+
+	/* If the pointer is not aligned on a 16bytes boundary, it is invalid by definition. */
+	if ((unsigned long)chunk % 16UL != 0 || chunk_is_allocated(chunk) == 0) {
+		(void)(write(STDERR_FILENO, "free(): invalid pointer\n", 24) + 1);
+		abort();
+	}
+
+	t_pool *pool = find_pool(chunk);
 	t_arena *arena = pool->arena;
 
 	/* We return the memory space to the pool free size. If the pool is empty, we unmap it. */
@@ -117,11 +61,24 @@ __free (void *ptr) {
 
 		chunk->prev_size &= ~(1UL << USED_CHUNK);
 
-		/* Try to defragment memory. */
-//		t_chunk *next_chunk = (t_chunk *)((unsigned long)chunk + chunk->size);
-//		if ()
+		/* Defragment memory. */
+		t_chunk *next_chunk = next_chunk(chunk);
+//		if (chunk_is_allocated(next_chunk) == 0) {
+//			chunk->size += next_chunk->size;
+//		}
+
+
+
 
 		memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
+
+		if (chunk->size > pool->biggest_chunk) pool->biggest_chunk = chunk->size;
+
+		/* Update the chunk size in the next chunk header. Don't forget to keep the allocation bit. */
+		if ((void *)next_chunk != pool_end(pool)) {
+			next_chunk->prev_size &= (1UL << USED_CHUNK);
+			next_chunk->prev_size |= chunk->size;
+		}
 	}
 
 	pthread_mutex_unlock(&arena->mutex);

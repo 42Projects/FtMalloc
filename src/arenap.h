@@ -5,6 +5,7 @@
 # include <sys/mman.h>
 
 # define M_ARENA_MAX 8
+# define M_SAFE_POINTERS 0
 # define FLAG_THRESHOLD 58
 
 enum					e_type {

@@ -18,11 +18,11 @@ user_area (t_pool *pool, t_chunk *chunk, size_t size, pthread_mutex_t *mutex) {
 	size += sizeof(t_chunk);
 
 	t_chunk *next_chunk = (t_chunk *)((unsigned long)chunk + size);
-	unsigned long end = (unsigned long)pool_end(pool), old_size = chunk->size;
+	unsigned long old_size = chunk->size;
 
 	chunk->size = size;
 	chunk->prev_size |= (1UL << USED_CHUNK);
-	if ((unsigned long)next_chunk != end && chunk_is_allocated(next_chunk) == 0) {
+	if (next_chunk != pool_end(pool) && next_chunk->size == 0) {
 		next_chunk->size = old_size - size;
 		next_chunk->prev_size = size;
 	}
@@ -99,13 +99,13 @@ __malloc (size_t size) {
 	static t_arena_data		arena_data = { .arena_count = 0 };
 
 
+	size = (size + 0xfUL) & ~0xfUL;
 	int chunk_type = 0;
 	if (size >= (1UL << FLAG_THRESHOLD)) {
 		return NULL;
 	} else if (size > SIZE_SMALL) {
 		chunk_type = CHUNK_TYPE_LARGE;
 	} else {
-		size = (size + MEM_ALIGN) & ~MEM_ALIGN;
 		chunk_type = (size <= SIZE_TINY) ? CHUNK_TYPE_TINY : CHUNK_TYPE_SMALL;
 	}
 
@@ -250,6 +250,9 @@ __malloc (size_t size) {
 	t_chunk *chunk = pool->chunk;
 
 	while (chunk_is_allocated(chunk) || chunk->size < required_size) {
+
+//		printf("CHUNK AT %p, CHUNK SIZE = %lu, POOL END AT %p\n", chunk, chunk->size, pool_end(pool));
+
 		chunk = next_chunk(chunk);
 	}
 
