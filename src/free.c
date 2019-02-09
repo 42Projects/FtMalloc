@@ -23,7 +23,6 @@ __free (void *ptr) {
 
 	/* We return the memory space to the pool free size. If the pool is empty, we unmap it. */
 	pool->free_size += chunk->size;
-
 	if ((pool->free_size + sizeof(t_pool)) == (pool->size & SIZE_MASK)) {
 
 		if (is_main_pool(pool)) {
@@ -32,10 +31,12 @@ __free (void *ptr) {
 				//TODO change
 			}
 
-			pool->chunk->size = pool->free_size;
-			pool->chunk->prev_size = 0UL;
+			chunk = pool->chunk;
+			chunk->size = pool->free_size;
+			chunk->prev_size = 0UL;
+			pool->biggest_chunk_size = chunk->size;
 
-			memset(pool->chunk->user_area, 0, pool->free_size - sizeof(t_chunk));
+			memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
 
 		} else {
 
@@ -58,25 +59,23 @@ __free (void *ptr) {
 
 //		if (next_chunk != pool_end(pool) && chunk_is_allocated(next_chunk) == 0) {
 
-	//		chunk->size += next_chunk->size;
+//			chunk->size += next_chunk->size;
 //			printf("%lu: CHUNK %lu ABSORBING NEXT CHUNK %lu, NEW NEXT CHUNK AT %p IS %lu, POOL END AT %p\n", K, chunk->size, next_chunk->size, next_chunk(next_chunk), next_chunk(next_chunk)->size, pool_end(pool));
 
-	//		next_chunk = next_chunk(chunk);
+//			next_chunk = next_chunk(chunk);
 //		}
 
 //		t_chunk *previous_chunk = (t_chunk *)((unsigned long)chunk - (chunk->prev_size & SIZE_MASK));
-//		if (previous_chunk != chunk && chunk_is_allocated(previous_chunk) == 0) {
+//		if (chunk != pool->chunk && chunk_is_allocated(previous_chunk) == 0) {
 //			previous_chunk->size += chunk->size;
 //			chunk = previous_chunk;
 //		}
 
 		memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
 
-	//	if (chunk->size > pool->biggest_chunk_size) {
-
-//	printf("OLD BIGGEST IS %lu, ASSIGNING NEW BIGGEST OF %lu\n", pool->biggest_chunk_size, chunk->size);
-//			pool->biggest_chunk_size = chunk->size;
-//		}
+		if (chunk->size > pool->biggest_chunk_size) {
+			pool->biggest_chunk_size = chunk->size;
+		}
 
 		/* Update the chunk size in the next chunk header. Don't forget to keep the allocation bit. */
 		if (next_chunk != pool_end(pool)) {

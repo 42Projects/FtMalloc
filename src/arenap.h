@@ -4,7 +4,7 @@
 # include <pthread.h>
 # include <sys/mman.h>
 
-# define M_ARENA_MAX 1
+# define M_ARENA_MAX 8
 # define FLAG_THRESHOLD 58
 
 enum					e_type {

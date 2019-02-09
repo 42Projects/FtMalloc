@@ -51,7 +51,13 @@ user_area (t_pool *pool, t_chunk *chunk, size_t size, pthread_mutex_t *mutex) {
 
 			pool->biggest_chunk_size = remaining;
 		}
+
+//		printf("NEW BIGGEST IS %lu\n", pool->biggest_chunk_size);
+	} else if (pool->biggest_chunk_size > pool->free_size) {
+		printf("POOL FREE SIZE = %lu, BIGGEST CHUNK = %lu, CHUNK SIZE = %lu\n", pool->free_size, pool->biggest_chunk_size, chunk->size);
 	}
+
+//	printf("--------------------------------------\n");
 
 	pthread_mutex_unlock(mutex);
 	return (void *)chunk->user_area;
@@ -253,29 +259,43 @@ __malloc (size_t size) {
 		return user_area(pool, pool->chunk, size, &arena->mutex);
 	}
 
-	/* Find the first free memory chunk and look for a chunk large enough to accommodate user request. */
-	t_chunk *chunk = pool->chunk;
-
-
 	/*
+	   Find the first free memory chunk and look for a chunk large enough to accommodate user request.
 	   This loop is not protected, ie. if the chunk reaches the end of the pool it will be stuck as chunk size will be 0
-	   (or segfault is the memory area is protected). However, a chunk should NEVER reach the end of the pool as that
+	   (or segfault iff the memory area is protected). However, a chunk should NEVER reach the end of the pool as that
 	   would mean that a chunk of suitable size could not be found. If this happens, maths are wrong somewhere.
 	 */
 
+//	printf("POOL FREE SIZE = %lu, BIGGEST CHUNK = %lu, REQUESTED SIZE = %lu\n", pool->free_size, pool->biggest_chunk_size, required_size);
+
+	t_chunk *chunk = pool->chunk;
 	while (chunk_is_allocated(chunk) || chunk->size < required_size) {
+
+//		if  (chunk_is_allocated(chunk) == 0) printf("FREE CHUNK OF SIZE %lu\n", chunk->size);
 
 //		printf("%sALLOCATED CHUNK OF SIZE %lu\n", chunk_is_allocated(chunk) ? "" : "NON ", chunk->size);
 
 		if (pool_end(pool) == chunk) {
+
+
+			printf("POOL AT %p, BIGGEST IS %lu, REQUESTED IS %lu\n", pool, pool->biggest_chunk_size, required_size);
+
+			chunk = pool->chunk;
+			while (pool_end(pool) != chunk) {
+
+				printf("%sALLOCATED CHUNK OF SIZE %lu\n", chunk_is_allocated(chunk) ? "" : "NON ", chunk->size);
+
+
+				chunk = next_chunk(chunk);
+
+			}
+
 			printf("FAIL\n");
 			abort();
 		}
 
 		chunk = next_chunk(chunk);
 	}
-
-//	printf("--------------------------------------\n");
 
 	return user_area(pool, chunk, size, &arena->mutex);
 }
