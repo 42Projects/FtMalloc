@@ -4,8 +4,7 @@
 # include <pthread.h>
 # include <sys/mman.h>
 
-# define M_ARENA_MAX 8
-# define M_SAFE_POINTERS 0
+# define M_ARENA_MAX 1
 # define FLAG_THRESHOLD 58
 
 enum					e_type {
@@ -26,13 +25,15 @@ enum					e_type {
 typedef struct			s_chunk {
 	unsigned long		prev_size;
 	unsigned long		size;
+	struct s_pool		*pool;
+	__uint64_t 			__padding__;
 	void				*user_area[0];
 }						t_chunk;
 
 typedef struct 			s_pool {
 	unsigned long		free_size;
 	unsigned long		size;
-	unsigned long		biggest_chunk;
+	unsigned long		biggest_chunk_size;
 	struct s_arena		*arena;
 	struct s_pool		*left;
 	struct s_pool		*right;

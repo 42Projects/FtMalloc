@@ -22,6 +22,8 @@ buff_number (int base, unsigned long number, char *buffer, size_t *offset) {
 	const char hexa[16] = "0123456789abcdef";
 	char rev_buff[16];
 
+	if (number == 0) buffer[(*offset)++] = '0';
+
 	int k = 0;
 	while (number != 0) {
 		rev_buff[k++] = (base == 10) ? dec[number % 10] : hexa[number % 16];
@@ -53,6 +55,7 @@ show_alloc_mem (void) {
 
 	for (int k = 0; k < g_arena_data->arena_count; k++) {
 		t_arena *arena = &g_arena_data->arenas[k];
+		size_t arena_total = 0;
 
 		buff_string("\n", buffer, &offset);
 
@@ -77,16 +80,19 @@ show_alloc_mem (void) {
 			buff_string("\n", buffer, &offset);
 
 			chunk = pool->chunk;
-
 			while (chunk != pool_end(pool)) {
 
 				if (chunk_is_allocated(chunk)) {
+					size_t chunk_size = chunk->size - sizeof(t_chunk);
+
 					buff_number(16, (unsigned long)chunk->user_area, buffer, &offset);
 					buff_string(" - ", buffer, &offset);
 					buff_number(16, (unsigned long)next_chunk(chunk), buffer, &offset);
 					buff_string(" : ", buffer, &offset);
-					buff_number(10, chunk->size - sizeof(t_chunk), buffer, &offset);
+					buff_number(10, chunk_size, buffer, &offset);
 					buff_string(" bytes\n", buffer, &offset);
+
+					arena_total += chunk_size;
 				}
 
 				chunk = next_chunk(chunk);
@@ -99,18 +105,29 @@ show_alloc_mem (void) {
 		while (pool != NULL) {
 
 			buff_string("\x1b[36mLARGE :\x1b[0m ", buffer, &offset);
-			buff_number(16, (unsigned long)pool, buffer, &offset);
+			buff_number(16, (unsigned long) pool, buffer, &offset);
 			buff_string("\n", buffer, &offset);
+
 			chunk = pool->chunk;
-			buff_number(16, (unsigned long)chunk->user_area, buffer, &offset);
-			buff_string(" - ", buffer, &offset);
-			buff_number(16, (unsigned long)next_chunk(chunk), buffer, &offset);
-			buff_string(" : ", buffer, &offset);
-			buff_number(10, chunk->size - sizeof(t_chunk), buffer, &offset);
-			buff_string(" bytes\n", buffer, &offset);
+			if (chunk_is_allocated(chunk)) {
+				size_t chunk_size = chunk->size - sizeof(t_chunk);
+
+				buff_number(16, (unsigned long) chunk->user_area, buffer, &offset);
+				buff_string(" - ", buffer, &offset);
+				buff_number(16, (unsigned long) next_chunk(chunk), buffer, &offset);
+				buff_string(" : ", buffer, &offset);
+				buff_number(10, chunk_size, buffer, &offset);
+				buff_string(" bytes\n", buffer, &offset);
+
+				arena_total += chunk_size;
+			}
 
 			pool = pool->left;
 		}
+
+		buff_string("\x1b[31mTotal: \x1b[0m", buffer, &offset);
+		buff_number(10, arena_total, buffer, &offset);
+		buff_string(" bytes\n", buffer, &offset);
 	}
 
 	flush_buffer(buffer, &offset);

@@ -4,19 +4,6 @@
 #include <string.h>
 
 
-static inline t_pool *
-find_pool (t_chunk *chunk) {
-
-	while ((chunk->prev_size & SIZE_MASK) != 0) {
-		chunk = (t_chunk *)((unsigned long)chunk - (chunk->prev_size & SIZE_MASK));
-	}
-
-	t_pool *pool = (t_pool *)((unsigned long)chunk - sizeof(t_pool));
-	pthread_mutex_lock(&pool->arena->mutex);
-
-	return pool;
-}
-
 void
 __free (void *ptr) {
 
@@ -30,8 +17,9 @@ __free (void *ptr) {
 		abort();
 	}
 
-	t_pool *pool = find_pool(chunk);
+	t_pool *pool = chunk->pool;
 	t_arena *arena = pool->arena;
+	pthread_mutex_lock(&arena->mutex);
 
 	/* We return the memory space to the pool free size. If the pool is empty, we unmap it. */
 	pool->free_size += chunk->size;
@@ -59,26 +47,46 @@ __free (void *ptr) {
 
 	} else {
 
+//		static size_t K = 0;
+
 		chunk->prev_size &= ~(1UL << USED_CHUNK);
 
 		/* Defragment memory. */
 		t_chunk *next_chunk = next_chunk(chunk);
-//		if (chunk_is_allocated(next_chunk) == 0) {
-//			chunk->size += next_chunk->size;
+
+//		printf("CHUNK %lu, NEXT CHUNK %lu", chunk->size, next_chunk->size);
+
+//		if (next_chunk != pool_end(pool) && chunk_is_allocated(next_chunk) == 0) {
+
+	//		chunk->size += next_chunk->size;
+//			printf("%lu: CHUNK %lu ABSORBING NEXT CHUNK %lu, NEW NEXT CHUNK AT %p IS %lu, POOL END AT %p\n", K, chunk->size, next_chunk->size, next_chunk(next_chunk), next_chunk(next_chunk)->size, pool_end(pool));
+
+	//		next_chunk = next_chunk(chunk);
 //		}
 
-
-
+//		t_chunk *previous_chunk = (t_chunk *)((unsigned long)chunk - (chunk->prev_size & SIZE_MASK));
+//		if (previous_chunk != chunk && chunk_is_allocated(previous_chunk) == 0) {
+//			previous_chunk->size += chunk->size;
+//			chunk = previous_chunk;
+//		}
 
 		memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
 
-		if (chunk->size > pool->biggest_chunk) pool->biggest_chunk = chunk->size;
+	//	if (chunk->size > pool->biggest_chunk_size) {
+
+//	printf("OLD BIGGEST IS %lu, ASSIGNING NEW BIGGEST OF %lu\n", pool->biggest_chunk_size, chunk->size);
+//			pool->biggest_chunk_size = chunk->size;
+//		}
 
 		/* Update the chunk size in the next chunk header. Don't forget to keep the allocation bit. */
-		if ((void *)next_chunk != pool_end(pool)) {
-			next_chunk->prev_size &= (1UL << USED_CHUNK);
-			next_chunk->prev_size |= chunk->size;
+		if (next_chunk != pool_end(pool)) {
+
+//			printf("%lu: NEXT CHUNK AT %p IS %lu, POOL END AT %p\n", K, next_chunk, next_chunk->size, pool_end(pool));
+
+			next_chunk->prev_size = (next_chunk->prev_size & (1UL << USED_CHUNK)) | chunk->size;
 		}
+
+//		K++;
 	}
 
 	pthread_mutex_unlock(&arena->mutex);
