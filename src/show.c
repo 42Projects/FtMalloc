@@ -67,12 +67,12 @@ show_alloc_mem (void) {
 
 		buff_string("\x1b[0m\n", buffer, &offset);
 
-		pool = (pool_type_match(arena->main_pool, CHUNK_TYPE_LARGE)) ? arena->main_pool->right : arena->main_pool;
+		pool = (__mchunk_type_match(arena->main_pool, CHUNK_LARGE)) ? arena->main_pool->right : arena->main_pool;
 		while (pool != NULL) {
 
-			if (pool_type_match(pool, CHUNK_TYPE_TINY)) {
+			if (__mchunk_type_match(pool, CHUNK_TINY)) {
 				buff_string("\x1b[36mTINY :\x1b[0m ", buffer, &offset);
-			} else if (pool_type_match(pool, CHUNK_TYPE_SMALL)) {
+			} else if (__mchunk_type_match(pool, CHUNK_SMALL)) {
 				buff_string("\x1b[36mSMALL :\x1b[0m ", buffer, &offset);
 			}
 
@@ -80,14 +80,14 @@ show_alloc_mem (void) {
 			buff_string("\n", buffer, &offset);
 
 			chunk = pool->chunk;
-			while (chunk != pool_end(pool)) {
+			while (chunk != __mpool_end(pool)) {
 
-				if (chunk_is_allocated(chunk)) {
+				if (__mchunk_used(chunk)) {
 					size_t chunk_size = chunk->size - sizeof(t_chunk);
 
 					buff_number(16, (unsigned long)chunk->user_area, buffer, &offset);
 					buff_string(" - ", buffer, &offset);
-					buff_number(16, (unsigned long)next_chunk(chunk), buffer, &offset);
+					buff_number(16, (unsigned long)__mchunk_next(chunk), buffer, &offset);
 					buff_string(" : ", buffer, &offset);
 					buff_number(10, chunk_size, buffer, &offset);
 					buff_string(" bytes\n", buffer, &offset);
@@ -95,13 +95,13 @@ show_alloc_mem (void) {
 					arena_total += chunk_size;
 				}
 
-				chunk = next_chunk(chunk);
+				chunk = __mchunk_next(chunk);
 			}
 
 			pool = pool->right;
 		}
 
-		pool = (pool_type_match(arena->main_pool, CHUNK_TYPE_LARGE)) ? arena->main_pool : arena->main_pool->left;
+		pool = (__mchunk_type_match(arena->main_pool, CHUNK_LARGE)) ? arena->main_pool : arena->main_pool->left;
 		while (pool != NULL) {
 
 			buff_string("\x1b[36mLARGE :\x1b[0m ", buffer, &offset);
@@ -109,12 +109,12 @@ show_alloc_mem (void) {
 			buff_string("\n", buffer, &offset);
 
 			chunk = pool->chunk;
-			if (chunk_is_allocated(chunk)) {
+			if (__mchunk_used(chunk)) {
 				size_t chunk_size = chunk->size - sizeof(t_chunk);
 
 				buff_number(16, (unsigned long) chunk->user_area, buffer, &offset);
 				buff_string(" - ", buffer, &offset);
-				buff_number(16, (unsigned long) next_chunk(chunk), buffer, &offset);
+				buff_number(16, (unsigned long) __mchunk_next(chunk), buffer, &offset);
 				buff_string(" : ", buffer, &offset);
 				buff_number(10, chunk_size, buffer, &offset);
 				buff_string(" bytes\n", buffer, &offset);

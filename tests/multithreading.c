@@ -7,17 +7,16 @@
 #include <unistd.h>
 
 #define NUM_THREAD 32000
-#define FIRST_MALLOC_SIZE 15
+#define FIRST_MALLOC_SIZE 50
 #define SECOND_MALLOC_SIZE 4900
 
-void	*g_array[NUM_THREAD];
 
 static void
 *race_condition (void *info) {
 
 	*(void **)info = __malloc(FIRST_MALLOC_SIZE);
 
-	__free(*(void **)info);
+//	__free(*(void **)info);
 //	__free(*(void **)info);
 
 //	g_array[*(int *)info] = ret;
@@ -28,22 +27,26 @@ static void
 static void
 *second_call (void *info) {
 
-//	void *ret = __malloc(SECOND_MALLOC_SIZE);
+	void *ret = __malloc(SECOND_MALLOC_SIZE);
 
-//	__free(*(void **)info);
-//	__free(ret);
-
-//	__free(ret);
+	__free(ret);
+	__free(*(void **)info);
 
 	void *ptr1 = __malloc(1230);
 	void *ptr2 = __malloc(123);
 	void *ptr3 = __malloc(130);
+	__free(ptr1);
+	__free(ptr2);
 	void *ptr4 = __malloc(23);
+	__free(ptr3);
 	void *ptr5 = __malloc(12);
 	void *ptr6 = __malloc(10);
+	__free(ptr5);
 	void *ptr7 = __malloc(120);
 	void *ptr8 = __malloc(30);
 	void *ptr9 = __malloc(230);
+	__free(ptr9);
+	__free(ptr4);
 
 //	printf("ret = %p\n", ret);
 

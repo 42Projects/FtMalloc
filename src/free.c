@@ -12,7 +12,7 @@ __free (void *ptr) {
 	t_chunk *chunk = (t_chunk *)((unsigned long)ptr - sizeof(t_chunk));
 
 	/* If the pointer is not aligned on a 16bytes boundary, it is invalid by definition. */
-	if ((unsigned long)chunk % 16UL != 0 || chunk_is_allocated(chunk) == 0) {
+	if ((unsigned long)chunk % 16UL != 0 || __mchunk_used(chunk) == 0) {
 		(void)(write(STDERR_FILENO, "free(): invalid pointer\n", 24) + 1);
 		abort();
 	}
@@ -23,18 +23,18 @@ __free (void *ptr) {
 
 	/* We return the memory space to the pool free size. If the pool is empty, we unmap it. */
 	pool->free_size += chunk->size;
-	if ((pool->free_size + sizeof(t_pool)) == (pool->size & SIZE_MASK)) {
+	if (pool->free_size + sizeof(t_pool) == (pool->size & SIZE_MASK)) {
 
 		if (is_main_pool(pool)) {
-
-			if  (pool_type_match(pool, CHUNK_TYPE_LARGE)) {
-				//TODO change
-			}
-
 			chunk = pool->chunk;
 			chunk->size = pool->free_size;
 			chunk->prev_size = 0UL;
-			pool->biggest_chunk_size = chunk->size;
+			pool->max_chunk_size = chunk->size;
+
+			if  (__mchunk_type_match(pool, CHUNK_LARGE)) {
+				//TODO change
+
+			} else __marena_update_max_chunks(pool);
 
 			memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
 
@@ -45,47 +45,28 @@ __free (void *ptr) {
 
 			munmap(pool, pool->size & SIZE_MASK);
 		}
-
 	} else {
 
-//		static size_t K = 0;
-
-		chunk->prev_size &= ~(1UL << USED_CHUNK);
+		chunk->prev_size &= ~(1UL << CHUNK_USED);
 
 		/* Defragment memory. */
-		t_chunk *next_chunk = next_chunk(chunk);
+		t_chunk *next_chunk = __mchunk_next(chunk);
+		if (next_chunk != __mpool_end(pool) && __mchunk_used(next_chunk) == 0) {
+			chunk->size += next_chunk->size;
+			next_chunk = __mchunk_next(chunk);
+		}
 
-//		printf("CHUNK %lu, NEXT CHUNK %lu", chunk->size, next_chunk->size);
-
-//		if (next_chunk != pool_end(pool) && chunk_is_allocated(next_chunk) == 0) {
-
-//			chunk->size += next_chunk->size;
-//			printf("%lu: CHUNK %lu ABSORBING NEXT CHUNK %lu, NEW NEXT CHUNK AT %p IS %lu, POOL END AT %p\n", K, chunk->size, next_chunk->size, next_chunk(next_chunk), next_chunk(next_chunk)->size, pool_end(pool));
-
-//			next_chunk = next_chunk(chunk);
-//		}
-
-//		t_chunk *previous_chunk = (t_chunk *)((unsigned long)chunk - (chunk->prev_size & SIZE_MASK));
-//		if (chunk != pool->chunk && chunk_is_allocated(previous_chunk) == 0) {
-//			previous_chunk->size += chunk->size;
-//			chunk = previous_chunk;
-//		}
-
-		memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
-
-		if (chunk->size > pool->biggest_chunk_size) {
-			pool->biggest_chunk_size = chunk->size;
+		if (chunk->size > pool->max_chunk_size) {
+			pool->max_chunk_size = chunk->size;
+			__marena_update_max_chunks(pool);
 		}
 
 		/* Update the chunk size in the next chunk header. Don't forget to keep the allocation bit. */
-		if (next_chunk != pool_end(pool)) {
-
-//			printf("%lu: NEXT CHUNK AT %p IS %lu, POOL END AT %p\n", K, next_chunk, next_chunk->size, pool_end(pool));
-
-			next_chunk->prev_size = (next_chunk->prev_size & (1UL << USED_CHUNK)) | chunk->size;
+		if (next_chunk != __mpool_end(pool)) {
+			next_chunk->prev_size = (next_chunk->prev_size & (1UL << CHUNK_USED)) | chunk->size;
 		}
 
-//		K++;
+		memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
 	}
 
 	pthread_mutex_unlock(&arena->mutex);

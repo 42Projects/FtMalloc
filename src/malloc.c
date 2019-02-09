@@ -11,7 +11,7 @@ user_area (t_pool *pool, t_chunk *chunk, size_t size, pthread_mutex_t *mutex) {
 	   Populate chunk headers.
 	   A chunk header precedes the user area with the size of the user area (to allow us to navigate between allocated
 	   chunks which are not part of any linked list, and defragment the memory in free and realloc calls) and the size
-	   of the previous chunk. We also use the previous size to store flags such as USED_CHUNK to know if the chunk
+	   of the previous chunk. We also use the previous size to store flags such as CHUNK_USED to know if the chunk
 	   is used or not.
 	*/
 
@@ -19,45 +19,44 @@ user_area (t_pool *pool, t_chunk *chunk, size_t size, pthread_mutex_t *mutex) {
 	pool->free_size -= size;
 
 	unsigned long old_size = chunk->size;
-
 	chunk->size = size;
-	chunk->prev_size |= (1UL << USED_CHUNK);
+	chunk->prev_size |= (1UL << CHUNK_USED);
 	chunk->pool = pool;
-	t_chunk *next_chunk = next_chunk(chunk);
-	if (next_chunk != pool_end(pool) && next_chunk->size == 0) {
-		next_chunk->size = old_size - size;
-		next_chunk->prev_size = size;
+	t_chunk *next_chunk = __mchunk_next(chunk);
+
+	if (next_chunk != __mpool_end(pool)) {
+
+		if (next_chunk->size == 0) next_chunk->size = old_size - size;
+		next_chunk->prev_size = (next_chunk->prev_size & (1UL << CHUNK_USED)) | chunk->size;
 	}
 
-	if (pool_type_match(pool, CHUNK_TYPE_LARGE) == 0 && old_size == pool->biggest_chunk_size) {
+	if (__mchunk_type_match(pool, CHUNK_LARGE) == 0 && old_size == pool->max_chunk_size) {
 
-		unsigned long lookup_size = pool_type_match(pool, CHUNK_TYPE_TINY) ? SIZE_TINY : SIZE_SMALL;
-		if (next_chunk != pool_end(pool) && next_chunk->size >= lookup_size) {
-			pool->biggest_chunk_size = next_chunk->size;
+		unsigned long lookup_size = __mchunk_type_match(pool, CHUNK_TINY) ? SIZE_TINY : SIZE_SMALL;
+
+		if (next_chunk != __mpool_end(pool) && __mchunk_used(next_chunk) == 0 && next_chunk->size >= lookup_size) {
+
+			pool->max_chunk_size = next_chunk->size;
 		} else {
 
 			t_chunk *biggest_chunk = pool->chunk;
 			unsigned long remaining = 0;
-			while (biggest_chunk != pool_end(pool)) {
+			while (biggest_chunk != __mpool_end(pool)) {
 
-				if (chunk_is_allocated(biggest_chunk) == 0) {
+				if (__mchunk_used(biggest_chunk) == 0) {
 
 					if (biggest_chunk->size > remaining) remaining = biggest_chunk->size;
 					if (remaining >= lookup_size) break;
 				}
 
-				biggest_chunk = next_chunk(biggest_chunk);
+				biggest_chunk = __mchunk_next(biggest_chunk);
 			}
 
-			pool->biggest_chunk_size = remaining;
+			pool->max_chunk_size = remaining;
 		}
 
-//		printf("NEW BIGGEST IS %lu\n", pool->biggest_chunk_size);
-	} else if (pool->biggest_chunk_size > pool->free_size) {
-		printf("POOL FREE SIZE = %lu, BIGGEST CHUNK = %lu, CHUNK SIZE = %lu\n", pool->free_size, pool->biggest_chunk_size, chunk->size);
+		__marena_update_max_chunks(pool);
 	}
-
-//	printf("--------------------------------------\n");
 
 	pthread_mutex_unlock(mutex);
 	return (void *)chunk->user_area;
@@ -75,7 +74,8 @@ create_new_pool (int type, t_arena *arena, int chunk_type, unsigned long size, l
 	*/
 
 	unsigned long mmap_size;
-	if (chunk_type != CHUNK_TYPE_LARGE) {
+
+	if (chunk_type != CHUNK_LARGE) {
 		mmap_size = sizeof(t_pool) + (size + sizeof(t_chunk)) * CHUNKS_PER_POOL;
 	} else {
 		mmap_size = size + headers_size;
@@ -94,8 +94,9 @@ create_new_pool (int type, t_arena *arena, int chunk_type, unsigned long size, l
 	pool->size = mmap_size | (1UL << chunk_type);
 	pool->free_size = mmap_size - sizeof(t_pool);
 	pool->arena = arena;
-	pool->biggest_chunk_size = pool->free_size;
+	pool->max_chunk_size = pool->free_size;
 	pool->chunk->size = pool->free_size;
+	__marena_update_max_chunks(pool);
 
 	if (type == MAIN_POOL) pool->size |= (1UL << MAIN_POOL);
 
@@ -112,14 +113,14 @@ __malloc (size_t size) {
 
 
 	size = (size + 0xfUL) & ~0xfUL;
-
 	int chunk_type = 0;
-	if (size >= (1UL << FLAG_THRESHOLD)) {
+
+	if (size >= (1UL << SIZE_THRESHOLD)) {
 		return NULL;
 	} else if (size > SIZE_SMALL) {
-		chunk_type = CHUNK_TYPE_LARGE;
+		chunk_type = CHUNK_LARGE;
 	} else {
-		chunk_type = (size <= SIZE_TINY) ? CHUNK_TYPE_TINY : CHUNK_TYPE_SMALL;
+		chunk_type = (size <= SIZE_TINY) ? CHUNK_TINY : CHUNK_SMALL;
 	}
 
 	/*
@@ -138,7 +139,7 @@ __malloc (size_t size) {
 		t_pool *pool = create_new_pool(MAIN_POOL, &arena_data.arenas[0], chunk_type, size, pagesize, &main_arena_mutex);
 		if (pool == MAP_FAILED) return NULL;
 
-		arena_data.arenas[0] = (t_arena){ .main_pool = pool };
+		arena_data.arenas[0] = (t_arena){ .main_pool = pool, .max_chunk_small = 0, .max_chunk_tiny = 0 };
 		arena_data.arena_count = 1;
 		pthread_mutex_init(&arena_data.arenas[0].mutex, NULL);
 		pthread_mutex_lock(&arena_data.arenas[0].mutex);
@@ -171,9 +172,8 @@ __malloc (size_t size) {
 					++arena_data.arena_count;
 					arena = NULL;
 					break;
-				} else {
-					pthread_mutex_unlock(&new_arena_mutex);
-				}
+
+				} else pthread_mutex_unlock(&new_arena_mutex);
 			}
 
 			arena = &arena_data.arenas[(arena_index = 0)];
@@ -190,7 +190,7 @@ __malloc (size_t size) {
 		t_pool *pool = create_new_pool(MAIN_POOL, arena, chunk_type, size, pagesize, &new_arena_mutex);
 		if (pool == MAP_FAILED) return NULL;
 
-		arena_data.arenas[arena_index + 1] = (t_arena){ .main_pool = pool };
+		arena_data.arenas[arena_index + 1] = (t_arena){ .main_pool = pool, .max_chunk_small = 0, .max_chunk_tiny = 0 };
 		pthread_mutex_init(&arena->mutex, NULL);
 		pthread_mutex_lock(&arena->mutex);
 
@@ -203,7 +203,7 @@ __malloc (size_t size) {
 	   enough to accommodate the user-requested size.
 	*/
 
-	t_pool *pool = arena->main_pool;
+	t_pool *pool = NULL;
 	unsigned long required_size = size + sizeof(t_chunk);
 
 	/*
@@ -211,16 +211,18 @@ __malloc (size_t size) {
 	   the chunk type isn't large, as large chunks have their dedicated pool.
 	*/
 
-	if (chunk_type != CHUNK_TYPE_LARGE) {
+	if ((chunk_type == CHUNK_TINY && arena->max_chunk_tiny >= required_size)
+		|| (chunk_type == CHUNK_SMALL && arena->max_chunk_small >= required_size)) {
 
-		while (pool != NULL && (pool_type_match(pool, chunk_type) == 0 || pool->biggest_chunk_size < required_size)) {
+		pool = arena->main_pool;
+		while (pool != NULL && (__mchunk_type_match(pool, chunk_type) == 0 || pool->max_chunk_size < required_size)) {
 			pool = pool->right;
 		}
 	}
 
-	/* A suitable pool could not be found, we need to create one. */
-	if (pool == NULL || chunk_type == CHUNK_TYPE_LARGE ) {
+	if (pool == NULL) {
 
+		/* A suitable pool could not be found, we need to create one. */
 		pool = create_new_pool(0, arena, chunk_type, size, pagesize, &arena->mutex);
 		if (pool == MAP_FAILED) return NULL;
 
@@ -234,10 +236,10 @@ __malloc (size_t size) {
 		t_pool	*main_pool = arena->main_pool;
 
 		if (main_pool != NULL) {
-			t_pool *tmp = (chunk_type == CHUNK_TYPE_LARGE) ? main_pool->left : main_pool->right ;
+			t_pool *tmp = (chunk_type == CHUNK_LARGE) ? main_pool->left : main_pool->right ;
 
 			/* Insert the new pool into the pool list. */
-			if (chunk_type == CHUNK_TYPE_LARGE) {
+			if (chunk_type == CHUNK_LARGE) {
 				main_pool->left = pool;
 				pool->right = main_pool;
 				pool->left = tmp;
@@ -252,9 +254,7 @@ __malloc (size_t size) {
 				if (tmp != NULL) tmp->left = pool;
 			}
 
-		} else {
-			arena->main_pool = pool;
-		}
+		} else arena->main_pool = pool;
 
 		return user_area(pool, pool->chunk, size, &arena->mutex);
 	}
@@ -266,27 +266,23 @@ __malloc (size_t size) {
 	   would mean that a chunk of suitable size could not be found. If this happens, maths are wrong somewhere.
 	 */
 
-//	printf("POOL FREE SIZE = %lu, BIGGEST CHUNK = %lu, REQUESTED SIZE = %lu\n", pool->free_size, pool->biggest_chunk_size, required_size);
+//	printf("POOL FREE SIZE = %lu, BIGGEST CHUNK = %lu, REQUESTED SIZE = %lu\n", pool->free_size, pool->max_chunk_size, required_size);
 
 	t_chunk *chunk = pool->chunk;
-	while (chunk_is_allocated(chunk) || chunk->size < required_size) {
+	while (__mchunk_used(chunk) || chunk->size < required_size) {
 
-//		if  (chunk_is_allocated(chunk) == 0) printf("FREE CHUNK OF SIZE %lu\n", chunk->size);
-
-//		printf("%sALLOCATED CHUNK OF SIZE %lu\n", chunk_is_allocated(chunk) ? "" : "NON ", chunk->size);
-
-		if (pool_end(pool) == chunk) {
+		if (__mpool_end(pool) == chunk) {
 
 
-			printf("POOL AT %p, BIGGEST IS %lu, REQUESTED IS %lu\n", pool, pool->biggest_chunk_size, required_size);
+			printf("POOL AT %p, FREE SIZE IS %lu, BIGGEST IS %lu, REQUESTED IS %lu\n", pool, pool->free_size, pool->max_chunk_size, required_size);
 
 			chunk = pool->chunk;
-			while (pool_end(pool) != chunk) {
+			while (__mpool_end(pool) != chunk) {
 
-				printf("%sALLOCATED CHUNK OF SIZE %lu\n", chunk_is_allocated(chunk) ? "" : "NON ", chunk->size);
+				printf("%sALLOCATED CHUNK OF SIZE %lu\n", __mchunk_used(chunk) ? "" : "NON ", chunk->size);
 
 
-				chunk = next_chunk(chunk);
+				chunk = __mchunk_next(chunk);
 
 			}
 
@@ -294,7 +290,7 @@ __malloc (size_t size) {
 			abort();
 		}
 
-		chunk = next_chunk(chunk);
+		chunk = __mchunk_next(chunk);
 	}
 
 	return user_area(pool, chunk, size, &arena->mutex);
