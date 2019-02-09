@@ -10,9 +10,8 @@ user_area (t_bin *bin, t_chunk *chunk, size_t size, pthread_mutex_t *mutex) {
 	/*
 	   Populate chunk headers.
 	   A chunk header precedes the user area with the size of the user area (to allow us to navigate between allocated
-	   chunks which are not part of any linked list, and defragment the memory in free and realloc calls) and the size
-	   of the previous chunk. We also use the previous size to store flags such as CHUNK_USED to know if the chunk
-	   is used or not.
+	   chunks which are not part of any linked list, and defragment the memory in free and realloc calls) and the pool
+	   header address. We also use the size to store CHUNK_USED to know if the chunk is used or not.
 	*/
 
 	size += sizeof(t_chunk);
@@ -209,11 +208,7 @@ __malloc (size_t size) {
 	t_bin *bin = NULL;
 	unsigned long required_size = size + sizeof(t_chunk);
 
-	/*
-	   Look for a bin with a matching chunk type and enough space to accommodate user request. This applies only if
-	   the chunk type isn't large, as large chunks have their dedicated bin.
-	*/
-
+	/* Look for a bin with a matching chunk type and enough space to accommodate user request. */
 	if (chunk_type == CHUNK_LARGE || (chunk_type == CHUNK_TINY && arena->max_chunk_tiny >= required_size)
 		|| (chunk_type == CHUNK_SMALL && arena->max_chunk_small >= required_size)) {
 
@@ -230,7 +225,7 @@ __malloc (size_t size) {
 		if (bin == MAP_FAILED) return NULL;
 
 		/*
-		   As large bins don't need to be searched for empty space, they have their own linked list.
+		   As large bins generally don't need to be searched for empty space, they have their own linked list.
 		   For tiny and small bins, we are using a non-circular double linked list anchored to the main bin.
 		   Tiny chunks bins will be placed to the left of the main bin, and small chunks bins to it's right.
 		*/
@@ -267,10 +262,10 @@ __malloc (size_t size) {
 
 	/*
 	   Find the first free memory chunk and look for a chunk large enough to accommodate user request.
-	   This loop is not protected, ie. if the chunk reaches the end of the bin it will be stuck as chunk size will be 0
-	   (or segfault iff the memory area is protected). However, a chunk should NEVER reach the end of the bin as that
-	   would mean that a chunk of suitable size could not be found. If this happens, maths are wrong somewhere.
-	 */
+	   This loop is not protected, ie. if the chunk reaches the end of the bin it is undefined behavior.
+	   However, a chunk should NEVER reach the end of the bin as that would mean that a chunk of suitable size could
+	   not be found. If this happens, maths are wrong somewhere.
+	*/
 
 	t_chunk *chunk = bin->chunk;
 	while (__mchunk_is_used(chunk) || __mchunk_size(chunk) < required_size) {
