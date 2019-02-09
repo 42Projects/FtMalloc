@@ -17,12 +17,13 @@ enum					e_type {
 
 # define SIZE_MASK ((1UL << (SIZE_THRESHOLD + 1)) - 1)
 
-# define __mchunk_is_used(chunk) (chunk->prev_size & (1UL << CHUNK_USED))
+# define __mchunk_is_used(chunk) (chunk->size & (1UL << CHUNK_USED))
+# define __mchunk_next(chunk) ((t_chunk *)((unsigned long)chunk + __mchunk_size(chunk)))
 # define __mchunk_not_used(chunk) (__mchunk_is_used(chunk) == 0)
-# define __mchunk_next(chunk) ((t_chunk *)((unsigned long)chunk + chunk->size))
+# define __mchunk_size(chunk) (chunk->size & SIZE_MASK)
 # define __mchunk_type_match(pool, chunk_type) (pool->size & (1UL << chunk_type))
 # define __mchunk_type_nomatch(pool, chunk_type) (__mchunk_type_match(pool, chunk_type) == 0)
-# define __mpool_end(pool) ((void *)((unsigned long)pool + (pool->size & SIZE_MASK)))
+# define __mpool_end(pool) ((void *)((unsigned long)pool + __mpool_size(pool)))
 # define __mpool_size(pool) (pool->size & SIZE_MASK)
 
 # define __marena_update_max_chunks(pool)																		\
@@ -36,10 +37,8 @@ enum					e_type {
 
 
 typedef struct			s_chunk {
-	unsigned long		prev_size;
 	unsigned long		size;
 	struct s_pool		*pool;
-	__uint64_t 			__padding__;
 	void				*user_area[0];
 }						__attribute__((packed)) t_chunk;
 

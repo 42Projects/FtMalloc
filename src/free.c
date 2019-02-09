@@ -22,13 +22,12 @@ __free (void *ptr) {
 	pthread_mutex_lock(&arena->mutex);
 
 	/* We return the memory space to the pool free size. If the pool is empty, we unmap it. */
-	pool->free_size += chunk->size;
+	pool->free_size += __mchunk_size(chunk);
 	if (pool->free_size + sizeof(t_pool) == __mpool_size(pool)) {
 
 		if (__mpool_main(pool)) {
 			chunk = pool->chunk;
 			chunk->size = pool->free_size;
-			chunk->prev_size = 0UL;
 			pool->max_chunk_size = chunk->size;
 
 			if  (__mchunk_type_match(pool, CHUNK_LARGE)) {
@@ -45,28 +44,20 @@ __free (void *ptr) {
 
 			munmap(pool, pool->size & SIZE_MASK);
 		}
-	} else {
 
-		chunk->prev_size &= ~(1UL << CHUNK_USED);
+	} else {
+		chunk->size &= ~(1UL << CHUNK_USED);
 
 		/* Defragment memory. */
 		t_chunk *next_chunk = __mchunk_next(chunk);
-		if (next_chunk != __mpool_end(pool) && __mchunk_not_used(next_chunk)) {
-			chunk->size += next_chunk->size;
-			next_chunk = __mchunk_next(chunk);
-		}
+		if (next_chunk != __mpool_end(pool) && __mchunk_not_used(next_chunk)) chunk->size += next_chunk->size;
 
-		if (chunk->size > pool->max_chunk_size) {
-			pool->max_chunk_size = chunk->size;
+		if (__mchunk_size(chunk) > pool->max_chunk_size) {
+			pool->max_chunk_size = __mchunk_size(chunk);
 			__marena_update_max_chunks(pool);
 		}
 
-		/* Update the chunk size in the next chunk header. Don't forget to keep the allocation bit. */
-		if (next_chunk != __mpool_end(pool)) {
-			next_chunk->prev_size = (next_chunk->prev_size & (1UL << CHUNK_USED)) | chunk->size;
-		}
-
-		memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
+		memset(chunk->user_area, 0, __mchunk_size(chunk) - sizeof(t_chunk));
 	}
 
 	pthread_mutex_unlock(&arena->mutex);

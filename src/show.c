@@ -41,7 +41,7 @@ buff_number (int base, unsigned long number, char *buffer, size_t *offset) {
 
 	if (*offset == BUFF_SIZE - 1) flush_buffer(buffer, offset);
 }
-#include <stdio.h>
+
 void
 show_alloc_mem (void) {
 
@@ -83,7 +83,7 @@ show_alloc_mem (void) {
 			while (chunk != __mpool_end(pool)) {
 
 				if (__mchunk_is_used(chunk)) {
-					size_t chunk_size = chunk->size - sizeof(t_chunk);
+					size_t chunk_size = __mchunk_size(chunk) - sizeof(t_chunk);
 
 					buff_number(16, (unsigned long)chunk->user_area, buffer, &offset);
 					buff_string(" - ", buffer, &offset);
@@ -110,7 +110,7 @@ show_alloc_mem (void) {
 
 			chunk = pool->chunk;
 			if (__mchunk_is_used(chunk)) {
-				size_t chunk_size = chunk->size - sizeof(t_chunk);
+				size_t chunk_size = __mchunk_size(chunk) - sizeof(t_chunk);
 
 				buff_number(16, (unsigned long) chunk->user_area, buffer, &offset);
 				buff_string(" - ", buffer, &offset);

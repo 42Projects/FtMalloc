@@ -18,25 +18,20 @@ user_area (t_pool *pool, t_chunk *chunk, size_t size, pthread_mutex_t *mutex) {
 	size += sizeof(t_chunk);
 	pool->free_size -= size;
 
-	unsigned long old_size = chunk->size;
-	chunk->size = size;
-	chunk->prev_size |= (1UL << CHUNK_USED);
+	unsigned long old_size = __mchunk_size(chunk);
+	chunk->size = size | (1UL << CHUNK_USED);
 	chunk->pool = pool;
 	t_chunk *next_chunk = __mchunk_next(chunk);
 
-	if (next_chunk != __mpool_end(pool)) {
-
-		if (next_chunk->size == 0) next_chunk->size = old_size - size;
-		next_chunk->prev_size = (next_chunk->prev_size & (1UL << CHUNK_USED)) | chunk->size;
-	}
+	if (next_chunk != __mpool_end(pool) && next_chunk->size == 0) next_chunk->size = old_size - size;
 
 	if (__mchunk_type_nomatch(pool, CHUNK_LARGE) && old_size == pool->max_chunk_size) {
 
 		unsigned long req_size = __mchunk_type_match(pool, CHUNK_TINY) ? SIZE_TINY : SIZE_SMALL;
 
-		if (next_chunk != __mpool_end(pool) && __mchunk_not_used(next_chunk) && next_chunk->size >= req_size) {
+		if (next_chunk != __mpool_end(pool) && __mchunk_not_used(next_chunk) && __mchunk_size(next_chunk) >= req_size) {
 
-			pool->max_chunk_size = next_chunk->size;
+			pool->max_chunk_size = __mchunk_size(next_chunk);
 		} else {
 
 			t_chunk *biggest_chunk = pool->chunk;
@@ -45,7 +40,7 @@ user_area (t_pool *pool, t_chunk *chunk, size_t size, pthread_mutex_t *mutex) {
 
 				if (__mchunk_not_used(biggest_chunk)) {
 
-					if (biggest_chunk->size > remaining) remaining = biggest_chunk->size;
+					if (__mchunk_size(biggest_chunk) > remaining) remaining = __mchunk_size(biggest_chunk);
 					if (remaining >= req_size) break;
 				}
 
@@ -102,7 +97,7 @@ create_new_pool (int type, t_arena *arena, int chunk_type, unsigned long size, l
 
 	return pool;
 }
-#include <stdlib.h>
+
 void *
 __malloc (size_t size) {
 
@@ -266,10 +261,8 @@ __malloc (size_t size) {
 	   would mean that a chunk of suitable size could not be found. If this happens, maths are wrong somewhere.
 	 */
 
-//	printf("POOL FREE SIZE = %lu, BIGGEST CHUNK = %lu, REQUESTED SIZE = %lu\n", pool->free_size, pool->max_chunk_size, required_size);
-
 	t_chunk *chunk = pool->chunk;
-	while (__mchunk_is_used(chunk) || chunk->size < required_size) {
+	while (__mchunk_is_used(chunk) || __mchunk_size(chunk) < required_size) {
 		chunk = __mchunk_next(chunk);
 	}
 

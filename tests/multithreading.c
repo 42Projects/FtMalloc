@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 #define NUM_THREAD 32000
-#define FIRST_MALLOC_SIZE 500
+#define FIRST_MALLOC_SIZE 42
 #define SECOND_MALLOC_SIZE 4900
 
 
@@ -41,9 +41,12 @@ static void
 	__free(ptr3);
 	void *ptr5 = __malloc(12);
 	void *ptr6 = __malloc(10);
+	__free(ptr6);
 	__free(ptr5);
 	void *ptr7 = __malloc(120);
+	__free(ptr7);
 	void *ptr8 = __malloc(30);
+	__free(ptr8);
 	void *ptr9 = __malloc(230);
 	__free(ptr9);
 	__free(ptr4);
@@ -82,7 +85,7 @@ main (void) {
 
 //	printf("T\n");
 
-//	show_alloc_mem();
+	show_alloc_mem();
 
 	return 0;
 }
