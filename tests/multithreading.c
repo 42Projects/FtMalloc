@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 #define NUM_THREAD 32000
-#define FIRST_MALLOC_SIZE 50
+#define FIRST_MALLOC_SIZE 500
 #define SECOND_MALLOC_SIZE 4900
 
 

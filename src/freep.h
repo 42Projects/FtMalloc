@@ -6,6 +6,6 @@
 /* For abort. */
 # include <stdlib.h>
 
-# define is_main_pool(pool) (pool->size & (1UL << MAIN_POOL))
+# define __mpool_main(pool) (pool->size & (1UL << MAIN_POOL))
 
 #endif /* __FREE_PRIVATE_H */

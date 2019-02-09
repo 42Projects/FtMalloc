@@ -12,7 +12,7 @@ __free (void *ptr) {
 	t_chunk *chunk = (t_chunk *)((unsigned long)ptr - sizeof(t_chunk));
 
 	/* If the pointer is not aligned on a 16bytes boundary, it is invalid by definition. */
-	if ((unsigned long)chunk % 16UL != 0 || __mchunk_used(chunk) == 0) {
+	if ((unsigned long)chunk % 16UL != 0 || __mchunk_is_used(chunk) == 0) {
 		(void)(write(STDERR_FILENO, "free(): invalid pointer\n", 24) + 1);
 		abort();
 	}
@@ -23,9 +23,9 @@ __free (void *ptr) {
 
 	/* We return the memory space to the pool free size. If the pool is empty, we unmap it. */
 	pool->free_size += chunk->size;
-	if (pool->free_size + sizeof(t_pool) == (pool->size & SIZE_MASK)) {
+	if (pool->free_size + sizeof(t_pool) == __mpool_size(pool)) {
 
-		if (is_main_pool(pool)) {
+		if (__mpool_main(pool)) {
 			chunk = pool->chunk;
 			chunk->size = pool->free_size;
 			chunk->prev_size = 0UL;
@@ -51,7 +51,7 @@ __free (void *ptr) {
 
 		/* Defragment memory. */
 		t_chunk *next_chunk = __mchunk_next(chunk);
-		if (next_chunk != __mpool_end(pool) && __mchunk_used(next_chunk) == 0) {
+		if (next_chunk != __mpool_end(pool) && __mchunk_not_used(next_chunk)) {
 			chunk->size += next_chunk->size;
 			next_chunk = __mchunk_next(chunk);
 		}

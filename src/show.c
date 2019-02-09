@@ -82,7 +82,7 @@ show_alloc_mem (void) {
 			chunk = pool->chunk;
 			while (chunk != __mpool_end(pool)) {
 
-				if (__mchunk_used(chunk)) {
+				if (__mchunk_is_used(chunk)) {
 					size_t chunk_size = chunk->size - sizeof(t_chunk);
 
 					buff_number(16, (unsigned long)chunk->user_area, buffer, &offset);
@@ -109,7 +109,7 @@ show_alloc_mem (void) {
 			buff_string("\n", buffer, &offset);
 
 			chunk = pool->chunk;
-			if (__mchunk_used(chunk)) {
+			if (__mchunk_is_used(chunk)) {
 				size_t chunk_size = chunk->size - sizeof(t_chunk);
 
 				buff_number(16, (unsigned long) chunk->user_area, buffer, &offset);
