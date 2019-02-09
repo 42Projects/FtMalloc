@@ -47,7 +47,7 @@ show_alloc_mem (void) {
 
 	char		 			buffer[BUFF_SIZE];
 	size_t 					offset = 0;
-	t_pool 					*pool = NULL;
+	t_bin 					*bin = NULL;
 	t_chunk					*chunk = NULL;
 
 
@@ -67,20 +67,16 @@ show_alloc_mem (void) {
 
 		buff_string("\x1b[0m\n", buffer, &offset);
 
-		pool = (__mchunk_type_match(arena->main_pool, CHUNK_LARGE)) ? arena->main_pool->right : arena->main_pool;
-		while (pool != NULL) {
+		bin = arena->small_bins;
+		if (bin != NULL && __mchunk_type_match(bin, CHUNK_SMALL)) bin = bin->right;
+		while (bin != NULL) {
 
-			if (__mchunk_type_match(pool, CHUNK_TINY)) {
-				buff_string("\x1b[36mTINY :\x1b[0m ", buffer, &offset);
-			} else if (__mchunk_type_match(pool, CHUNK_SMALL)) {
-				buff_string("\x1b[36mSMALL :\x1b[0m ", buffer, &offset);
-			}
-
-			buff_number(16, (unsigned long)pool, buffer, &offset);
+			buff_string("\x1b[36mTINY :\x1b[0m ", buffer, &offset);
+			buff_number(16, (unsigned long)bin, buffer, &offset);
 			buff_string("\n", buffer, &offset);
 
-			chunk = pool->chunk;
-			while (chunk != __mpool_end(pool)) {
+			chunk = bin->chunk;
+			while (chunk != __mbin_end(bin)) {
 
 				if (__mchunk_is_used(chunk)) {
 					size_t chunk_size = __mchunk_size(chunk) - sizeof(t_chunk);
@@ -98,17 +94,47 @@ show_alloc_mem (void) {
 				chunk = __mchunk_next(chunk);
 			}
 
-			pool = pool->right;
+			bin = bin->right;
 		}
 
-		pool = (__mchunk_type_match(arena->main_pool, CHUNK_LARGE)) ? arena->main_pool : arena->main_pool->left;
-		while (pool != NULL) {
+		bin = arena->small_bins;
+		if (bin != NULL && __mchunk_type_match(bin, CHUNK_TINY)) bin = bin->left;
+		while (bin != NULL) {
 
-			buff_string("\x1b[36mLARGE :\x1b[0m ", buffer, &offset);
-			buff_number(16, (unsigned long) pool, buffer, &offset);
+			buff_string("\x1b[36mSMALL :\x1b[0m ", buffer, &offset);
+			buff_number(16, (unsigned long)bin, buffer, &offset);
 			buff_string("\n", buffer, &offset);
 
-			chunk = pool->chunk;
+			chunk = bin->chunk;
+			while (chunk != __mbin_end(bin)) {
+
+				if (__mchunk_is_used(chunk)) {
+					size_t chunk_size = __mchunk_size(chunk) - sizeof(t_chunk);
+
+					buff_number(16, (unsigned long)chunk->user_area, buffer, &offset);
+					buff_string(" - ", buffer, &offset);
+					buff_number(16, (unsigned long)__mchunk_next(chunk), buffer, &offset);
+					buff_string(" : ", buffer, &offset);
+					buff_number(10, chunk_size, buffer, &offset);
+					buff_string(" bytes\n", buffer, &offset);
+
+					arena_total += chunk_size;
+				}
+
+				chunk = __mchunk_next(chunk);
+			}
+
+			bin = bin->right;
+		}
+
+		bin = arena->large_bins;
+		while (bin != NULL) {
+
+			buff_string("\x1b[36mLARGE :\x1b[0m ", buffer, &offset);
+			buff_number(16, (unsigned long) bin, buffer, &offset);
+			buff_string("\n", buffer, &offset);
+
+			chunk = bin->chunk;
 			if (__mchunk_is_used(chunk)) {
 				size_t chunk_size = __mchunk_size(chunk) - sizeof(t_chunk);
 
@@ -122,7 +148,7 @@ show_alloc_mem (void) {
 				arena_total += chunk_size;
 			}
 
-			pool = pool->left;
+			bin = bin->left;
 		}
 
 		buff_string("\x1b[31mTotal: \x1b[0m", buffer, &offset);

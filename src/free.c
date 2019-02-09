@@ -17,32 +17,30 @@ __free (void *ptr) {
 		abort();
 	}
 
-	t_pool *pool = chunk->pool;
-	t_arena *arena = pool->arena;
+	t_bin *bin = chunk->bin;
+	t_arena *arena = bin->arena;
 	pthread_mutex_lock(&arena->mutex);
 
-	/* We return the memory space to the pool free size. If the pool is empty, we unmap it. */
-	pool->free_size += __mchunk_size(chunk);
-	if (pool->free_size + sizeof(t_pool) == __mpool_size(pool)) {
+	/* We return the memory space to the bin free size. If the bin is empty, we unmap it. */
+	bin->free_size += __mchunk_size(chunk);
+	if (bin->free_size + sizeof(t_bin) == __mbin_size(bin)) {
 
-		if (__mpool_main(pool)) {
-			chunk = pool->chunk;
-			chunk->size = pool->free_size;
-			pool->max_chunk_size = chunk->size;
+		if (__mpool_main(bin)) {
 
-			if  (__mchunk_type_match(pool, CHUNK_LARGE)) {
-				//TODO change
+			chunk = bin->chunk;
+			chunk->size = bin->free_size;
+			bin->max_chunk_size = chunk->size;
 
-			} else __marena_update_max_chunks(pool);
+			if  (__mchunk_type_nomatch(bin, CHUNK_LARGE)) __marena_update_max_chunks(bin);
 
 			memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
 
 		} else {
 
-			if (pool->left != NULL) pool->left->right = pool->right;
-			if (pool->right != NULL) pool->right->left = pool->left;
+			if (bin->left != NULL) bin->left->right = bin->right;
+			if (bin->right != NULL) bin->right->left = bin->left;
 
-			munmap(pool, pool->size & SIZE_MASK);
+			munmap(bin, bin->size & SIZE_MASK);
 		}
 
 	} else {
@@ -50,11 +48,11 @@ __free (void *ptr) {
 
 		/* Defragment memory. */
 		t_chunk *next_chunk = __mchunk_next(chunk);
-		if (next_chunk != __mpool_end(pool) && __mchunk_not_used(next_chunk)) chunk->size += next_chunk->size;
+		if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)) chunk->size += next_chunk->size;
 
-		if (__mchunk_size(chunk) > pool->max_chunk_size) {
-			pool->max_chunk_size = __mchunk_size(chunk);
-			__marena_update_max_chunks(pool);
+		if (__mchunk_size(chunk) > bin->max_chunk_size) {
+			bin->max_chunk_size = __mchunk_size(chunk);
+			__marena_update_max_chunks(bin);
 		}
 
 		memset(chunk->user_area, 0, __mchunk_size(chunk) - sizeof(t_chunk));

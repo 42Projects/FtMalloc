@@ -6,6 +6,6 @@
 /* For abort. */
 # include <stdlib.h>
 
-# define __mpool_main(pool) (pool->size & (1UL << MAIN_POOL))
+# define __mpool_main(bin) (__mchunk_type_match(bin, CHUNK_LARGE) ? bin == arena->large_bins : bin == arena->small_bins)
 
 #endif /* __FREE_PRIVATE_H */

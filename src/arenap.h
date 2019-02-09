@@ -5,11 +5,10 @@
 # include <sys/mman.h>
 
 # define M_ARENA_MAX 8
-# define SIZE_THRESHOLD 58
+# define SIZE_THRESHOLD 59
 
 enum					e_type {
-	MAIN_POOL = SIZE_THRESHOLD + 1,
-	CHUNK_USED,
+	CHUNK_USED = SIZE_THRESHOLD + 1,
 	CHUNK_TINY,
 	CHUNK_SMALL,
 	CHUNK_LARGE
@@ -17,44 +16,45 @@ enum					e_type {
 
 # define SIZE_MASK ((1UL << (SIZE_THRESHOLD + 1)) - 1)
 
+# define __mbin_end(bin) ((void *)((unsigned long)bin + __mbin_size(bin)))
+# define __mbin_size(bin) (bin->size & SIZE_MASK)
 # define __mchunk_is_used(chunk) (chunk->size & (1UL << CHUNK_USED))
 # define __mchunk_next(chunk) ((t_chunk *)((unsigned long)chunk + __mchunk_size(chunk)))
 # define __mchunk_not_used(chunk) (__mchunk_is_used(chunk) == 0)
 # define __mchunk_size(chunk) (chunk->size & SIZE_MASK)
-# define __mchunk_type_match(pool, chunk_type) (pool->size & (1UL << chunk_type))
-# define __mchunk_type_nomatch(pool, chunk_type) (__mchunk_type_match(pool, chunk_type) == 0)
-# define __mpool_end(pool) ((void *)((unsigned long)pool + __mpool_size(pool)))
-# define __mpool_size(pool) (pool->size & SIZE_MASK)
+# define __mchunk_type_match(bin, chunk_type) (bin->size & (1UL << chunk_type))
+# define __mchunk_type_nomatch(bin, chunk_type) (__mchunk_type_match(bin, chunk_type) == 0)
 
-# define __marena_update_max_chunks(pool)																		\
+# define __marena_update_max_chunks(bin)																		\
 ({ 																												\
-	if (__mchunk_type_match(pool, CHUNK_TINY) && pool->max_chunk_size > pool->arena->max_chunk_tiny) { 			\
-		pool->arena->max_chunk_tiny = pool->max_chunk_size; 													\
-	} else if (__mchunk_type_match(pool, CHUNK_SMALL) && pool->max_chunk_size > pool->arena->max_chunk_small) { \
-		pool->arena->max_chunk_small = pool->max_chunk_size; 													\
+	if (__mchunk_type_match(bin, CHUNK_TINY) && bin->max_chunk_size > bin->arena->max_chunk_tiny) { 			\
+		bin->arena->max_chunk_tiny = bin->max_chunk_size; 														\
+	} else if (__mchunk_type_match(bin, CHUNK_SMALL) && bin->max_chunk_size > bin->arena->max_chunk_small) { 	\
+		bin->arena->max_chunk_small = bin->max_chunk_size; 														\
 	} 																											\
 })
 
 
 typedef struct			s_chunk {
 	unsigned long		size;
-	struct s_pool		*pool;
+	struct s_bin		*bin;
 	void				*user_area[0];
 }						__attribute__((packed)) t_chunk;
 
-typedef struct 			s_pool {
+typedef struct 			s_bin {
 	unsigned long		free_size;
 	unsigned long		size;
 	unsigned long		max_chunk_size;
 	struct s_arena		*arena;
-	struct s_pool		*left;
-	struct s_pool		*right;
+	struct s_bin		*left;
+	struct s_bin		*right;
 	t_chunk				chunk[0];
-}						__attribute__((packed)) t_pool;
+}						__attribute__((packed)) t_bin;
 
 typedef struct			s_arena {
 	pthread_mutex_t		mutex;
-	t_pool				*main_pool;
+	t_bin				*small_bins;
+	t_bin				*large_bins;
 	unsigned long		max_chunk_tiny;
 	unsigned long		max_chunk_small;
 }						t_arena;
