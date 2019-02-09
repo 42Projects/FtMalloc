@@ -48,14 +48,15 @@ __free (void *ptr) {
 
 		/* Defragment memory. */
 		t_chunk *next_chunk = __mchunk_next(chunk);
-		if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)) chunk->size += next_chunk->size;
+		if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)) {
+			chunk->size += next_chunk->size;
+			memset(next_chunk, 0, sizeof(t_chunk));
+		}
 
 		if (__mchunk_size(chunk) > bin->max_chunk_size) {
 			bin->max_chunk_size = __mchunk_size(chunk);
 			__marena_update_max_chunks(bin);
 		}
-
-		memset(chunk->user_area, 0, __mchunk_size(chunk) - sizeof(t_chunk));
 	}
 
 	pthread_mutex_unlock(&arena->mutex);

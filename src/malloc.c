@@ -274,3 +274,9 @@ __malloc (size_t size) {
 
 	return user_area(bin, chunk, size, &arena->mutex);
 }
+
+void *
+calloc (size_t nmemb, size_t size) {
+
+	return __malloc(nmemb * size);
+}

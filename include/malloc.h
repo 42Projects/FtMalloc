@@ -3,6 +3,7 @@
 
 # include <unistd.h>
 
+void	*calloc(size_t nmemb, size_t size);
 void	__free(void *ptr);
 void	*__malloc(size_t size);
 void	*__realloc(void *ptr, size_t size);
