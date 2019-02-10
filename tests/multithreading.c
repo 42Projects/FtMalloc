@@ -7,18 +7,14 @@
 #include <unistd.h>
 
 #define NUM_THREAD 32000
-#define FIRST_MALLOC_SIZE 42
-#define SECOND_MALLOC_SIZE 4900
-#define REALLOC_SIZE (FIRST_MALLOC_SIZE + SECOND_MALLOC_SIZE)
+#define FIRST_MALLOC_SIZE 40
+#define SECOND_MALLOC_SIZE 340
+#define REALLOC_SIZE 5000
 
 static void
 *race_condition (void *info) {
 
-//	*(void **)info = __malloc(FIRST_MALLOC_SIZE);
-
-//	*(void **)info = __realloc(REALLOC_SIZE);
-
-//	g_array[*(int *)info] = ret;
+	*(void **)info = __malloc(FIRST_MALLOC_SIZE);
 
 	pthread_exit(NULL);
 }
@@ -26,12 +22,9 @@ static void
 static void
 *second_call (void *info) {
 
-//	void *ret = __malloc(SECOND_MALLOC_SIZE);
-
-//	__free(ret);
-//	__free(*(void **)info);
-
-/*	void *ptr1 = __malloc(1230);
+	void *ret = __malloc(SECOND_MALLOC_SIZE);
+	__free(ret);
+	void *ptr1 = __malloc(1230);
 	void *ptr2 = __malloc(123);
 	void *ptr3 = __malloc(130);
 	__free(ptr1);
@@ -40,6 +33,7 @@ static void
 	__free(ptr3);
 	void *ptr5 = __malloc(12);
 	void *ptr6 = __malloc(10);
+	__realloc(*(void **)info, REALLOC_SIZE);
 	__free(ptr6);
 	__free(ptr5);
 	void *ptr7 = __malloc(120);
@@ -48,9 +42,7 @@ static void
 	__free(ptr8);
 	void *ptr9 = __malloc(230);
 	__free(ptr9);
-	__free(ptr4);*/
-
-//	printf("ret = %p\n", ret);
+	__free(ptr4);
 
 	pthread_exit(NULL);
 }
@@ -82,7 +74,18 @@ main (void) {
 		pthread_join(th2[k], NULL);
 	}
 
-//	show_alloc_mem();
+
+/*	void *caca = __malloc(309300);
+
+	__free(caca);
+	void *c = __malloc(6321);
+	void *d = __malloc(20000);
+	void *bug = __malloc(50000);
+	__free(d);
+
+	__realloc(c, 15000);*/
+
+	show_alloc_mem();
 
 	return 0;
 }
