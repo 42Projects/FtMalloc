@@ -276,7 +276,7 @@ __malloc (size_t size) {
 }
 
 void *
-calloc (size_t nmemb, size_t size) {
+__calloc (size_t nmemb, size_t size) {
 
 	return __malloc(nmemb * size);
 }
