@@ -18,7 +18,7 @@ CC :=					gcc
 
 #	Flags
 DEBUG =					
-FLAGS =					-g3 -Wall -Wextra -Wcast-align -Wconversion -Werror 
+FLAGS =					-Wall -Wextra -Wcast-align -Wconversion -Werror 
 ifeq ($(OS), Darwin)
 	THREADS :=			$(shell sysctl -n hw.ncpu)
 else

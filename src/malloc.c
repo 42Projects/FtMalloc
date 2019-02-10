@@ -1,5 +1,4 @@
 #include "mallocp.h"
-#include <stdio.h>
 
 
 t_arena_data	*g_arena_data = NULL;
@@ -90,6 +89,8 @@ create_new_bin (t_arena *arena, int chunk_type, unsigned long size, long pagesiz
 	bin->size = mmap_size | (1UL << chunk_type);
 	bin->free_size = mmap_size - sizeof(t_bin);
 	bin->arena = arena;
+	bin->left = NULL;
+	bin->right = NULL;
 	bin->max_chunk_size = bin->free_size;
 	bin->chunk->size = bin->free_size;
 	__marena_update_max_chunks(bin, 0);
@@ -121,13 +122,13 @@ __vmalloc (size_t size, int zero_set) {
 		t_bin *bin = create_new_bin(&arena_data.arenas[0], chunk_type, size, pagesize, &main_arena_mutex);
 		if (bin == MAP_FAILED) return NULL;
 
+		arena_data.arena_count = 1;
 		arena_data.arenas[0] = (t_arena){
 			.small_bins = (chunk_type != CHUNK_LARGE) ? bin : NULL,
 			.large_bins = (chunk_type == CHUNK_LARGE) ? bin : NULL,
 			.max_chunk_small = 0,
 			.max_chunk_tiny = 0
 		};
-		arena_data.arena_count = 1;
 		pthread_mutex_init(&arena_data.arenas[0].mutex, NULL);
 		pthread_mutex_lock(&arena_data.arenas[0].mutex);
 		g_arena_data = &arena_data;
@@ -285,11 +286,14 @@ void
 		abort();
 	}
 
+	if (chunk->size >= size) return ptr;
+
 	t_bin *bin = chunk->bin;
 	t_arena *arena = bin->arena;
 	pthread_mutex_lock(&arena->mutex);
 	t_chunk *next_chunk = __mchunk_next(chunk);
 	unsigned long req_size = ((size + 0xfUL) & ~0xfUL) + sizeof(t_chunk);
+
 	if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)
 		&& __mchunk_size(chunk) + __mchunk_size(next_chunk) >= req_size) {
 

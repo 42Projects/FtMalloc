@@ -24,25 +24,25 @@ static void
 
 	void *ret = __malloc(SECOND_MALLOC_SIZE);
 	__free(ret);
-	void *ptr1 = __malloc(1230);
-	void *ptr2 = __malloc(123);
-	void *ptr3 = __malloc(130);
+	void *ptr1 = __malloc(rand() % 256);
+	void *ptr2 = __malloc(rand() % 4096);
+	void *ptr3 = __malloc(rand() % 256);
 	__free(ptr1);
 	__free(ptr2);
-	void *ptr4 = __malloc(23);
+	void *ptr4 = __malloc(rand() % 4096);
 	__free(ptr3);
-	void *ptr5 = __malloc(12);
-	void *ptr6 = __malloc(10);
-	__realloc(*(void **)info, REALLOC_SIZE);
+	void *ptr5 = __malloc(rand() % 256);
+	void *ptr6 = __malloc(rand() % 4096);
+	void *b = __realloc(*(void **)info, REALLOC_SIZE);
 	__free(ptr6);
 	__free(ptr5);
-	void *ptr7 = __malloc(120);
+	void *ptr7 = __malloc(rand() % 4096);
 	__free(ptr7);
-	void *ptr8 = __malloc(30);
+	void *ptr8 = __malloc(rand() % 256);
 	__free(ptr8);
-	void *ptr9 = __malloc(230);
+	void *ptr9 = __malloc(rand() % 10056);
 	__free(ptr9);
-	__free(ptr4);
+	void *c = __realloc(ptr4, rand() % 3000);
 
 	pthread_exit(NULL);
 }
@@ -53,8 +53,6 @@ main (void) {
 	pthread_t	th[NUM_THREAD];
 	pthread_t	th2[NUM_THREAD];
 	void		*info[NUM_THREAD];
-
-	//setenv("DEBUG", "1", 1);
 
 	/* Test for arena collision, true means there are race condition. */
 	printf("First batch of threads is calling malloc of data %d...\n", FIRST_MALLOC_SIZE);
@@ -74,18 +72,7 @@ main (void) {
 		pthread_join(th2[k], NULL);
 	}
 
-
-/*	void *caca = __malloc(309300);
-
-	__free(caca);
-	void *c = __malloc(6321);
-	void *d = __malloc(20000);
-	void *bug = __malloc(50000);
-	__free(d);
-
-	__realloc(c, 15000);*/
-
-	show_alloc_mem();
+//	show_alloc_mem();
 
 	return 0;
 }

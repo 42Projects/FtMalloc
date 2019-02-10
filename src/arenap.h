@@ -34,11 +34,8 @@ enum					e_type {
 # define __mchunk_type_match(bin, chunk_type) (bin->size & (1UL << chunk_type))
 # define __mchunk_type_nomatch(bin, chunk_type) (__mchunk_type_match(bin, chunk_type) == 0)
 
-# define __mchunk_invalid(chunk)																	\
-(																									\
-	(chunk->size & FLAG_MASK) != (1UL << CHUNK_USED)												\
-	|| __mabs((ssize_t)chunk - (ssize_t)chunk->bin) > (1UL << 32)									\
-)																									\
+# define __mchunk_invalid(chunk) \
+	((chunk->size & FLAG_MASK) != (1UL << CHUNK_USED) || __mabs((ssize_t)chunk - (ssize_t)chunk->bin) > (1UL << 32))
 
 # define __marena_update_max_chunks(bin, old_size)													\
 ({ 																									\
