@@ -5,7 +5,7 @@
 t_arena_data		*g_arena_data = NULL;
 
 static inline void *
-user_area (t_bin *bin, t_chunk *chunk, size_t size, pthread_mutex_t *mutex) {
+user_area (t_bin *bin, t_chunk *chunk, size_t size, pthread_mutex_t *mutex, int zero_set) {
 
 	/*
 	   Populate chunk headers.
@@ -53,10 +53,13 @@ user_area (t_bin *bin, t_chunk *chunk, size_t size, pthread_mutex_t *mutex) {
 	}
 
 	pthread_mutex_unlock(mutex);
+
+	if (zero_set == 1) memset(chunk->user_area, 0, size - sizeof(t_chunk));
+
 	return (void *)chunk->user_area;
 }
 
-static t_bin *
+static inline t_bin *
 create_new_bin (t_arena *arena, int chunk_type, unsigned long size, long pagesize, pthread_mutex_t *mutex) {
 
 	static unsigned long	headers_size = sizeof(t_bin) + sizeof(t_chunk);
@@ -69,11 +72,8 @@ create_new_bin (t_arena *arena, int chunk_type, unsigned long size, long pagesiz
 
 	unsigned long mmap_size;
 
-	if (chunk_type != CHUNK_LARGE) {
-		mmap_size = sizeof(t_bin) + (size + sizeof(t_chunk)) * CHUNKS_PER_POOL;
-	} else {
-		mmap_size = size + headers_size;
-	}
+	if (chunk_type != CHUNK_LARGE) mmap_size = sizeof(t_bin) + (size + sizeof(t_chunk)) * CHUNKS_PER_POOL;
+	else mmap_size = size + headers_size;
 
 	mmap_size = mmap_size + (unsigned long)pagesize - (mmap_size % (unsigned long)pagesize);
 	t_bin *bin = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
@@ -95,8 +95,8 @@ create_new_bin (t_arena *arena, int chunk_type, unsigned long size, long pagesiz
 	return bin;
 }
 
-void *
-__malloc (size_t size) {
+static inline void *
+__vmalloc (size_t size, int zero_set) {
 
 	static long 			pagesize = 0;
 	static pthread_mutex_t	main_arena_mutex = PTHREAD_MUTEX_INITIALIZER,
@@ -105,24 +105,12 @@ __malloc (size_t size) {
 
 
 	size = (size + 0xfUL) & ~0xfUL;
-	int chunk_type = 0;
+	int chunk_type;
+	if (size >= (1UL << SIZE_THRESHOLD)) return NULL;
+	else if (size > SIZE_SMALL) chunk_type = CHUNK_LARGE;
+	else chunk_type = (size <= SIZE_TINY) ? CHUNK_TINY : CHUNK_SMALL;
 
-	if (size >= (1UL << SIZE_THRESHOLD)) {
-		return NULL;
-	} else if (size > SIZE_SMALL) {
-		chunk_type = CHUNK_LARGE;
-	} else {
-		chunk_type = (size <= SIZE_TINY) ? CHUNK_TINY : CHUNK_SMALL;
-	}
-
-	/*
-	   First malloc may be called simultaneously by different threads. In order to prevent the main arena being created
-	   more than once, we place a mutex before reading if main_arena already exists or not. If it doesn't, we release
-	   the mutex after it's creation to enable other thread access. If it does, the mutex is released instantly.
-	   GCC's builtin expect further improves performance as we know there will only be a single time in the program
-	   execution where the comparison holds false.
-	*/
-
+	/* If first call to malloc, create our arena data struct. */
 	pthread_mutex_lock(&main_arena_mutex);
 
 	if (__builtin_expect(g_arena_data == NULL, 0)) {
@@ -143,7 +131,7 @@ __malloc (size_t size) {
 		g_arena_data = &arena_data;
 
 		pthread_mutex_unlock(&main_arena_mutex);
-		return user_area(bin, bin->chunk, size, &arena_data.arenas[0].mutex);
+		return user_area(bin, bin->chunk, size, &arena_data.arenas[0].mutex, zero_set);
 	}
 
 	/*
@@ -197,7 +185,7 @@ __malloc (size_t size) {
 		pthread_mutex_lock(&arena->mutex);
 
 		pthread_mutex_unlock(&new_arena_mutex);
-		return user_area(bin, bin->chunk, size, &arena->mutex);
+		return user_area(bin, bin->chunk, size, &arena->mutex, zero_set);
 	}
 
 	/*
@@ -205,11 +193,11 @@ __malloc (size_t size) {
 	   enough to accommodate the user-requested size.
 	*/
 
-	t_bin *bin = NULL;
+	t_bin *bin = (chunk_type == CHUNK_LARGE) ? arena->large_bins : NULL;
 	unsigned long required_size = size + sizeof(t_chunk);
 
 	/* Look for a bin with a matching chunk type and enough space to accommodate user request. */
-	if (chunk_type == CHUNK_LARGE || (chunk_type == CHUNK_TINY && arena->max_chunk_tiny >= required_size)
+	if ((chunk_type == CHUNK_TINY && arena->max_chunk_tiny >= required_size)
 		|| (chunk_type == CHUNK_SMALL && arena->max_chunk_small >= required_size)) {
 
 		bin = arena->small_bins;
@@ -218,7 +206,7 @@ __malloc (size_t size) {
 		}
 	}
 
-	if (bin == NULL) {
+	if (bin == NULL || (chunk_type == CHUNK_LARGE && bin->max_chunk_size < required_size )) {
 
 		/* A suitable bin could not be found, we need to create one. */
 		bin = create_new_bin(arena, chunk_type, size, pagesize, &arena->mutex);
@@ -257,7 +245,7 @@ __malloc (size_t size) {
 			arena->small_bins = bin;
 		}
 
-		return user_area(bin, bin->chunk, size, &arena->mutex);
+		return user_area(bin, bin->chunk, size, &arena->mutex, zero_set);
 	}
 
 	/*
@@ -272,11 +260,17 @@ __malloc (size_t size) {
 		chunk = __mchunk_next(chunk);
 	}
 
-	return user_area(bin, chunk, size, &arena->mutex);
+	return user_area(bin, chunk, size, &arena->mutex, zero_set);
+}
+
+void *
+__malloc (size_t size) {
+
+	return __vmalloc(size, 0);
 }
 
 void *
 __calloc (size_t nmemb, size_t size) {
 
-	return __malloc(nmemb * size);
+	return __vmalloc(nmemb * size, 1);
 }

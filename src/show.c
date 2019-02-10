@@ -148,7 +148,7 @@ show_alloc_mem (void) {
 				arena_total += chunk_size;
 			}
 
-			bin = bin->left;
+			bin = bin->right;
 		}
 
 		buff_string("\x1b[31mTotal: \x1b[0m", buffer, &offset);

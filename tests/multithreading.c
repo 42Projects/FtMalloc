@@ -8,7 +8,7 @@
 
 #define NUM_THREAD 32000
 #define FIRST_MALLOC_SIZE 42
-#define SECOND_MALLOC_SIZE 4900
+#define SECOND_MALLOC_SIZE 49
 
 
 static void

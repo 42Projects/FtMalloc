@@ -1,7 +1,5 @@
 #include "arenap.h"
 #include "freep.h"
-#include <stdio.h>
-#include <string.h>
 
 
 void

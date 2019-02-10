@@ -4,6 +4,9 @@
 # include <pthread.h>
 # include <sys/mman.h>
 
+/* For memset. */
+# include <string.h>
+
 # define M_ARENA_MAX 8
 # define SIZE_THRESHOLD 59
 
