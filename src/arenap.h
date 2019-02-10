@@ -25,13 +25,15 @@ enum					e_type {
 # define __mchunk_type_match(bin, chunk_type) (bin->size & (1UL << chunk_type))
 # define __mchunk_type_nomatch(bin, chunk_type) (__mchunk_type_match(bin, chunk_type) == 0)
 
-# define __marena_update_max_chunks(bin)																		\
+# define __marena_update_max_chunks(bin, old_size)																\
 ({ 																												\
-	if (__mchunk_type_match(bin, CHUNK_TINY) && bin->max_chunk_size > bin->arena->max_chunk_tiny) { 			\
+	if (__mchunk_type_match(bin, CHUNK_TINY) && (old_size == bin->arena->max_chunk_tiny							\
+		|| bin->max_chunk_size > bin->arena->max_chunk_tiny)) {													\
 		bin->arena->max_chunk_tiny = bin->max_chunk_size; 														\
-	} else if (__mchunk_type_match(bin, CHUNK_SMALL) && bin->max_chunk_size > bin->arena->max_chunk_small) { 	\
+	} else if (__mchunk_type_match(bin, CHUNK_SMALL) && (old_size == bin->arena->max_chunk_small				\
+		|| bin->max_chunk_size > bin->arena->max_chunk_small)) {												\
 		bin->arena->max_chunk_small = bin->max_chunk_size; 														\
-	} 																											\
+	}																											\
 })
 
 

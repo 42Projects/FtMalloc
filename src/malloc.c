@@ -49,7 +49,7 @@ user_area (t_bin *bin, t_chunk *chunk, size_t size, pthread_mutex_t *mutex) {
 			bin->max_chunk_size = remaining;
 		}
 
-		__marena_update_max_chunks(bin);
+		__marena_update_max_chunks(bin, old_size);
 	}
 
 	pthread_mutex_unlock(mutex);
@@ -57,7 +57,7 @@ user_area (t_bin *bin, t_chunk *chunk, size_t size, pthread_mutex_t *mutex) {
 }
 
 static t_bin *
-create_new_pool (t_arena *arena, int chunk_type, unsigned long size, long pagesize, pthread_mutex_t *mutex) {
+create_new_bin (t_arena *arena, int chunk_type, unsigned long size, long pagesize, pthread_mutex_t *mutex) {
 
 	static unsigned long	headers_size = sizeof(t_bin) + sizeof(t_chunk);
 
@@ -76,23 +76,23 @@ create_new_pool (t_arena *arena, int chunk_type, unsigned long size, long pagesi
 	}
 
 	mmap_size = mmap_size + (unsigned long)pagesize - (mmap_size % (unsigned long)pagesize);
-	t_bin *pool = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+	t_bin *bin = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
 
-	if (__builtin_expect(pool == MAP_FAILED, 0)) {
+	if (__builtin_expect(bin == MAP_FAILED, 0)) {
 		errno = ENOMEM;
 		pthread_mutex_unlock(mutex);
 		return MAP_FAILED;
 	}
 
 	/* Keep track of the size and free size available. */
-	pool->size = mmap_size | (1UL << chunk_type);
-	pool->free_size = mmap_size - sizeof(t_bin);
-	pool->arena = arena;
-	pool->max_chunk_size = pool->free_size;
-	pool->chunk->size = pool->free_size;
-	__marena_update_max_chunks(pool);
+	bin->size = mmap_size | (1UL << chunk_type);
+	bin->free_size = mmap_size - sizeof(t_bin);
+	bin->arena = arena;
+	bin->max_chunk_size = bin->free_size;
+	bin->chunk->size = bin->free_size;
+	__marena_update_max_chunks(bin, 0);
 
-	return pool;
+	return bin;
 }
 
 void *
@@ -128,7 +128,7 @@ __malloc (size_t size) {
 	if (__builtin_expect(g_arena_data == NULL, 0)) {
 		pagesize = sysconf(_SC_PAGESIZE);
 
-		t_bin *bin = create_new_pool(&arena_data.arenas[0], chunk_type, size, pagesize, &main_arena_mutex);
+		t_bin *bin = create_new_bin(&arena_data.arenas[0], chunk_type, size, pagesize, &main_arena_mutex);
 		if (bin == MAP_FAILED) return NULL;
 
 		arena_data.arenas[0] = (t_arena){
@@ -184,7 +184,7 @@ __malloc (size_t size) {
 	if (arena == NULL) {
 
 		arena = &arena_data.arenas[arena_index + 1];
-		t_bin *bin = create_new_pool(arena, chunk_type, size, pagesize, &new_arena_mutex);
+		t_bin *bin = create_new_bin(arena, chunk_type, size, pagesize, &new_arena_mutex);
 		if (bin == MAP_FAILED) return NULL;
 
 		arena_data.arenas[arena_index + 1] = (t_arena){
@@ -221,7 +221,7 @@ __malloc (size_t size) {
 	if (bin == NULL) {
 
 		/* A suitable bin could not be found, we need to create one. */
-		bin = create_new_pool(arena, chunk_type, size, pagesize, &arena->mutex);
+		bin = create_new_bin(arena, chunk_type, size, pagesize, &arena->mutex);
 		if (bin == MAP_FAILED) return NULL;
 
 		/*

@@ -25,13 +25,13 @@ __free (void *ptr) {
 	bin->free_size += __mchunk_size(chunk);
 	if (bin->free_size + sizeof(t_bin) == __mbin_size(bin)) {
 
-		if (__mpool_main(bin)) {
+		if (__mbin_main(bin)) {
 
 			chunk = bin->chunk;
 			chunk->size = bin->free_size;
 			bin->max_chunk_size = chunk->size;
 
-			if  (__mchunk_type_nomatch(bin, CHUNK_LARGE)) __marena_update_max_chunks(bin);
+			if  (__mchunk_type_nomatch(bin, CHUNK_LARGE)) __marena_update_max_chunks(bin, 0);
 
 			memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
 
@@ -55,7 +55,7 @@ __free (void *ptr) {
 
 		if (__mchunk_size(chunk) > bin->max_chunk_size) {
 			bin->max_chunk_size = __mchunk_size(chunk);
-			__marena_update_max_chunks(bin);
+			__marena_update_max_chunks(bin, 0);
 		}
 	}
 

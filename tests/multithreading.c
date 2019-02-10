@@ -85,7 +85,7 @@ main (void) {
 
 //	printf("T\n");
 
-	show_alloc_mem();
+//	show_alloc_mem();
 
 	return 0;
 }
