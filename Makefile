@@ -36,7 +36,6 @@ SRC_DIR :=				./src/
 
 SRC +=					free.c
 SRC +=					malloc.c
-SRC +=					realloc.c
 SRC +=					show.c
 
 #	Sources

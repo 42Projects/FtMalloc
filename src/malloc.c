@@ -1,9 +1,9 @@
 #include "mallocp.h"
-#include <stdio.h>
 
 
-t_arena_data		*g_arena_data = NULL;
+t_arena_data	*g_arena_data = NULL;
 
+__attribute__ ((always_inline))
 static inline void *
 user_area (t_bin *bin, t_chunk *chunk, size_t size, pthread_mutex_t *mutex, int zero_set) {
 
@@ -59,6 +59,7 @@ user_area (t_bin *bin, t_chunk *chunk, size_t size, pthread_mutex_t *mutex, int 
 	return (void *)chunk->user_area;
 }
 
+__attribute__ ((always_inline))
 static inline t_bin *
 create_new_bin (t_arena *arena, int chunk_type, unsigned long size, long pagesize, pthread_mutex_t *mutex) {
 
@@ -95,6 +96,7 @@ create_new_bin (t_arena *arena, int chunk_type, unsigned long size, long pagesiz
 	return bin;
 }
 
+__attribute__ ((always_inline))
 static inline void *
 __vmalloc (size_t size, int zero_set) {
 
@@ -261,6 +263,23 @@ __vmalloc (size_t size, int zero_set) {
 	}
 
 	return user_area(bin, chunk, size, &arena->mutex, zero_set);
+}
+
+void
+*__realloc (void *ptr, size_t size) {
+
+	if (ptr == NULL) __malloc(size);
+	else if (size == 0) __free(ptr);
+
+	t_chunk *chunk = (t_chunk *)((unsigned long)ptr - sizeof(t_chunk));
+
+	/* If the pointer is not aligned on a 16bytes boundary, it is invalid by definition. */
+	if ((unsigned long)chunk % 16UL != 0 || __mchunk_invalid(chunk)) {
+		(void)(write(STDERR_FILENO, "realloc(): invalid pointer\n", 24) + 1);
+		abort();
+	}
+
+	return NULL;
 }
 
 void *

@@ -8,16 +8,15 @@
 
 #define NUM_THREAD 32000
 #define FIRST_MALLOC_SIZE 42
-#define SECOND_MALLOC_SIZE 49
-
+#define SECOND_MALLOC_SIZE 4900
+#define REALLOC_SIZE (FIRST_MALLOC_SIZE + SECOND_MALLOC_SIZE)
 
 static void
 *race_condition (void *info) {
 
-	*(void **)info = __malloc(FIRST_MALLOC_SIZE);
+//	*(void **)info = __malloc(FIRST_MALLOC_SIZE);
 
-//	__free(*(void **)info);
-//	__free(*(void **)info);
+//	*(void **)info = __realloc(REALLOC_SIZE);
 
 //	g_array[*(int *)info] = ret;
 
@@ -27,12 +26,12 @@ static void
 static void
 *second_call (void *info) {
 
-	void *ret = __malloc(SECOND_MALLOC_SIZE);
+//	void *ret = __malloc(SECOND_MALLOC_SIZE);
 
-	__free(ret);
-	__free(*(void **)info);
+//	__free(ret);
+//	__free(*(void **)info);
 
-	void *ptr1 = __malloc(1230);
+/*	void *ptr1 = __malloc(1230);
 	void *ptr2 = __malloc(123);
 	void *ptr3 = __malloc(130);
 	__free(ptr1);
@@ -49,7 +48,7 @@ static void
 	__free(ptr8);
 	void *ptr9 = __malloc(230);
 	__free(ptr9);
-	__free(ptr4);
+	__free(ptr4);*/
 
 //	printf("ret = %p\n", ret);
 
@@ -82,8 +81,6 @@ main (void) {
 	for (int k = 0; k < NUM_THREAD; k++) {
 		pthread_join(th2[k], NULL);
 	}
-
-//	printf("T\n");
 
 //	show_alloc_mem();
 

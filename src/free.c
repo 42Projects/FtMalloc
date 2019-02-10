@@ -1,5 +1,5 @@
+#include "malloc.h"
 #include "arenap.h"
-#include "freep.h"
 
 
 void
@@ -10,7 +10,7 @@ __free (void *ptr) {
 	t_chunk *chunk = (t_chunk *)((unsigned long)ptr - sizeof(t_chunk));
 
 	/* If the pointer is not aligned on a 16bytes boundary, it is invalid by definition. */
-	if ((unsigned long)chunk % 16UL != 0 || __mchunk_is_used(chunk) == 0) {
+	if ((unsigned long)chunk % 16UL != 0 || __mchunk_invalid(chunk)) {
 		(void)(write(STDERR_FILENO, "free(): invalid pointer\n", 24) + 1);
 		abort();
 	}

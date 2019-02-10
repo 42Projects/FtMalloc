@@ -7,6 +7,9 @@
 /* For memset. */
 # include <string.h>
 
+/* For abort. */
+# include <stdlib.h>
+
 # define M_ARENA_MAX 8
 # define SIZE_THRESHOLD 59
 
@@ -17,9 +20,12 @@ enum					e_type {
 	CHUNK_LARGE
 };
 
+# define FLAG_MASK (~SIZE_MASK)
 # define SIZE_MASK ((1UL << (SIZE_THRESHOLD + 1)) - 1)
 
+# define __mabs(x) ({ __typeof__(x) _x = (x); _x < 0 ? -_x : _x; })
 # define __mbin_end(bin) ((void *)((unsigned long)bin + __mbin_size(bin)))
+# define __mbin_main(bin) (__mchunk_type_match(bin, CHUNK_LARGE) ? bin == arena->large_bins : bin == arena->small_bins)
 # define __mbin_size(bin) (bin->size & SIZE_MASK)
 # define __mchunk_is_used(chunk) (chunk->size & (1UL << CHUNK_USED))
 # define __mchunk_next(chunk) ((t_chunk *)((unsigned long)chunk + __mchunk_size(chunk)))
@@ -28,15 +34,21 @@ enum					e_type {
 # define __mchunk_type_match(bin, chunk_type) (bin->size & (1UL << chunk_type))
 # define __mchunk_type_nomatch(bin, chunk_type) (__mchunk_type_match(bin, chunk_type) == 0)
 
-# define __marena_update_max_chunks(bin, old_size)																\
-({ 																												\
-	if (__mchunk_type_match(bin, CHUNK_TINY) && (old_size == bin->arena->max_chunk_tiny							\
-		|| bin->max_chunk_size > bin->arena->max_chunk_tiny)) {													\
-		bin->arena->max_chunk_tiny = bin->max_chunk_size; 														\
-	} else if (__mchunk_type_match(bin, CHUNK_SMALL) && (old_size == bin->arena->max_chunk_small				\
-		|| bin->max_chunk_size > bin->arena->max_chunk_small)) {												\
-		bin->arena->max_chunk_small = bin->max_chunk_size; 														\
-	}																											\
+# define __mchunk_invalid(chunk)																	\
+(																									\
+	(chunk->size & FLAG_MASK) != (1UL << CHUNK_USED)												\
+	|| __mabs((ssize_t)chunk - (ssize_t)chunk->bin) > (1UL << 32)									\
+)																									\
+
+# define __marena_update_max_chunks(bin, old_size)													\
+({ 																									\
+	if (__mchunk_type_match(bin, CHUNK_TINY) && (old_size == bin->arena->max_chunk_tiny				\
+		|| bin->max_chunk_size > bin->arena->max_chunk_tiny)) {										\
+		bin->arena->max_chunk_tiny = bin->max_chunk_size; 											\
+	} else if (__mchunk_type_match(bin, CHUNK_SMALL) && (old_size == bin->arena->max_chunk_small	\
+		|| bin->max_chunk_size > bin->arena->max_chunk_small)) {									\
+		bin->arena->max_chunk_small = bin->max_chunk_size; 											\
+	}																								\
 })
 
 

@@ -130,22 +130,29 @@ show_alloc_mem (void) {
 		bin = arena->large_bins;
 		while (bin != NULL) {
 
-			buff_string("\x1b[36mLARGE :\x1b[0m ", buffer, &offset);
+			buff_string("\x1b[36mLARGE (SIZE ", buffer, &offset);
+			buff_number(10, (unsigned long)__mbin_end(bin) - (unsigned long)bin, buffer, &offset);
+			buff_string("):\x1b[0m ", buffer, &offset);
 			buff_number(16, (unsigned long) bin, buffer, &offset);
 			buff_string("\n", buffer, &offset);
 
 			chunk = bin->chunk;
-			if (__mchunk_is_used(chunk)) {
-				size_t chunk_size = __mchunk_size(chunk) - sizeof(t_chunk);
+			while (chunk != __mbin_end(bin)) {
 
-				buff_number(16, (unsigned long) chunk->user_area, buffer, &offset);
-				buff_string(" - ", buffer, &offset);
-				buff_number(16, (unsigned long) __mchunk_next(chunk), buffer, &offset);
-				buff_string(" : ", buffer, &offset);
-				buff_number(10, chunk_size, buffer, &offset);
-				buff_string(" bytes\n", buffer, &offset);
+				if (__mchunk_is_used(chunk)) {
+					size_t chunk_size = __mchunk_size(chunk) - sizeof(t_chunk);
 
-				arena_total += chunk_size;
+					buff_number(16, (unsigned long) chunk->user_area, buffer, &offset);
+					buff_string(" - ", buffer, &offset);
+					buff_number(16, (unsigned long) __mchunk_next(chunk), buffer, &offset);
+					buff_string(" : ", buffer, &offset);
+					buff_number(10, chunk_size, buffer, &offset);
+					buff_string(" bytes\n", buffer, &offset);
+
+					arena_total += chunk_size;
+				}
+
+				chunk = __mchunk_next(chunk);
 			}
 
 			bin = bin->right;
