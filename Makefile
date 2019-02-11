@@ -62,7 +62,7 @@ $(OBJDIR):
 
 $(OBJDIR)%.o: %.c
 	@printf  "\033[1;92mCompiling $(NAME)\033[0m %-17s\033[32m[$<]\033[0m\n"
-	@$(CC) $(DEBUG)$(FLAGS)$(O_FLAG) $(HEADERS) -fpic -c $< -o $@
+	@$(CC) $(FLAGS)$(O_FLAG) $(HEADERS) -fpic -c $< -o $@
 	@printf "\033[A\033[2K"
 
 clean:

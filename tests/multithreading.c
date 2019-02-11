@@ -9,12 +9,13 @@
 #define NUM_THREAD 32000
 #define FIRST_MALLOC_SIZE 40
 #define SECOND_MALLOC_SIZE 340
+#define NUM(x) (x)
 #define REALLOC_SIZE 5000
 
 static void
 *race_condition (void *info) {
 
-	*(void **)info = __malloc(FIRST_MALLOC_SIZE);
+	*(void **)info = __malloc(NUM(FIRST_MALLOC_SIZE));
 
 	pthread_exit(NULL);
 }
@@ -22,27 +23,27 @@ static void
 static void
 *second_call (void *info) {
 
-	void *ret = __malloc(SECOND_MALLOC_SIZE);
+	void *ret = __malloc(NUM(SECOND_MALLOC_SIZE));
 	__free(ret);
-	void *ptr1 = __malloc(rand() % 256);
-	void *ptr2 = __malloc(rand() % 4096);
-	void *ptr3 = __malloc(rand() % 256);
+	void *ptr1 = __malloc(NUM(56));
+	void *ptr2 = __malloc(NUM(96));
+	void *ptr3 = __malloc(NUM(356));
 	__free(ptr1);
 	__free(ptr2);
-	void *ptr4 = __malloc(rand() % 4096);
+	void *ptr4 = __malloc(NUM(2096));
 	__free(ptr3);
-	void *ptr5 = __malloc(rand() % 256);
-	void *ptr6 = __malloc(rand() % 4096);
+	void *ptr5 = __malloc(NUM(256));
+	void *ptr6 = __malloc(NUM(196));
 	void *b = __realloc(*(void **)info, REALLOC_SIZE);
 	__free(ptr6);
 	__free(ptr5);
-	void *ptr7 = __malloc(rand() % 4096);
+	void *ptr7 = __malloc(NUM(1096));
 	__free(ptr7);
-	void *ptr8 = __malloc(rand() % 256);
+	void *ptr8 = __malloc(NUM(16));
 	__free(ptr8);
-	void *ptr9 = __malloc(rand() % 10056);
+	void *ptr9 = __malloc(NUM(10056));
 	__free(ptr9);
-	void *c = __realloc(ptr4, rand() % 3000);
+	void *c = __realloc(ptr4, NUM(3000));
 
 	pthread_exit(NULL);
 }

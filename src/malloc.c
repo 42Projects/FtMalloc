@@ -231,17 +231,11 @@ __vmalloc (size_t size, int zero_set) {
 			/* Insert the new bin into the bin list. */
 			if (chunk_type == CHUNK_TINY) {
 				main_bin->left = bin;
-				bin->right = main_bin;
 				bin->left = tmp;
-
-				if (tmp != NULL) tmp->right = bin;
 
 			} else {
 				main_bin->right = bin;
-				bin->left = main_bin;
 				bin->right = tmp;
-
-				if (tmp != NULL) tmp->left = bin;
 			}
 
 		} else if (chunk_type == CHUNK_LARGE) {

@@ -19,27 +19,17 @@ __free (void *ptr) {
 	t_arena *arena = bin->arena;
 	pthread_mutex_lock(&arena->mutex);
 
-	/* We return the memory space to the bin free size. If the bin is empty, we unmap it. */
+	/* We return the memory space to the bin free size. If the bin is empty, reset the chunks headers. */
 	bin->free_size += __mchunk_size(chunk);
 	if (bin->free_size + sizeof(t_bin) == __mbin_size(bin)) {
 
-		if (__mbin_main(bin)) {
+		chunk = bin->chunk;
+		chunk->size = bin->free_size;
+		bin->max_chunk_size = chunk->size;
 
-			chunk = bin->chunk;
-			chunk->size = bin->free_size;
-			bin->max_chunk_size = chunk->size;
+		if  (__mchunk_type_nomatch(bin, CHUNK_LARGE)) __marena_update_max_chunks(bin, 0);
 
-			if  (__mchunk_type_nomatch(bin, CHUNK_LARGE)) __marena_update_max_chunks(bin, 0);
-
-			memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
-
-		} else {
-
-			if (bin->left != NULL) bin->left->right = bin->right;
-			if (bin->right != NULL) bin->right->left = bin->left;
-
-			munmap(bin, bin->size & SIZE_MASK);
-		}
+		memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
 
 	} else {
 		chunk->size &= ~(1UL << CHUNK_USED);
@@ -54,6 +44,24 @@ __free (void *ptr) {
 		if (__mchunk_size(chunk) > bin->max_chunk_size) {
 			bin->max_chunk_size = __mchunk_size(chunk);
 			__marena_update_max_chunks(bin, 0);
+		}
+	}
+
+	/* If the new max chunk size of the bin is larger than that of the first bin in the list, reorder the list. */
+	t_bin *first_bin = __mbin_main(bin);
+	if (__mchunk_type_match(bin, CHUNK_TINY)) first_bin = first_bin->left;
+	else first_bin = first_bin->right;
+
+	if (first_bin != NULL && bin != first_bin && bin->max_chunk_size > first_bin->max_chunk_size) {
+		t_bin *main_bin = __mbin_main(bin);
+
+		if (__mchunk_type_match(bin, CHUNK_TINY)) {
+			main_bin->left = bin;
+			bin->left = first_bin;
+
+		} else {
+			main_bin->right = bin;
+			bin->right = first_bin;
 		}
 	}
 
