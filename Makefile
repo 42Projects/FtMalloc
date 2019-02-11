@@ -18,7 +18,7 @@ CC :=					gcc
 
 #	Flags
 DEBUG =					
-FLAGS =					-Wall -Wextra -Wcast-align -Wconversion -Werror 
+FLAGS =					-g3 -Wall -Wextra -Wcast-align -Wconversion -Werror 
 ifeq ($(OS), Darwin)
 	THREADS :=			$(shell sysctl -n hw.ncpu)
 else
@@ -28,7 +28,7 @@ endif
 FAST :=					-j$(THREADS)
 DYN_FLAG :=				-shared
 HEADERS :=				-I ./include/
-O_FLAG :=				-O3
+O_FLAG :=				-O0
 
 #	Directories
 OBJDIR :=				./build/

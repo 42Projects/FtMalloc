@@ -5,17 +5,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 
 #define NUM_THREAD 32000
 #define FIRST_MALLOC_SIZE 40
 #define SECOND_MALLOC_SIZE 340
 #define NUM(x) (x)
+#define MALLOC(x) (__malloc(x))
+#define FREE(x) (__free(x))
 #define REALLOC_SIZE 5000
 
 static void
 *race_condition (void *info) {
 
-	*(void **)info = __malloc(NUM(FIRST_MALLOC_SIZE));
+	*(void **)info = MALLOC(NUM(FIRST_MALLOC_SIZE));
 
 	pthread_exit(NULL);
 }
@@ -23,27 +26,27 @@ static void
 static void
 *second_call (void *info) {
 
-	void *ret = __malloc(NUM(SECOND_MALLOC_SIZE));
-	__free(ret);
-	void *ptr1 = __malloc(NUM(56));
-	void *ptr2 = __malloc(NUM(96));
-	void *ptr3 = __malloc(NUM(356));
-	__free(ptr1);
-	__free(ptr2);
-	void *ptr4 = __malloc(NUM(2096));
-	__free(ptr3);
-	void *ptr5 = __malloc(NUM(256));
-	void *ptr6 = __malloc(NUM(196));
-	void *b = __realloc(*(void **)info, REALLOC_SIZE);
-	__free(ptr6);
-	__free(ptr5);
-	void *ptr7 = __malloc(NUM(1096));
-	__free(ptr7);
-	void *ptr8 = __malloc(NUM(16));
-	__free(ptr8);
-	void *ptr9 = __malloc(NUM(10056));
-	__free(ptr9);
-	void *c = __realloc(ptr4, NUM(3000));
+	void *ret = MALLOC(NUM(SECOND_MALLOC_SIZE));
+	FREE(ret);
+	void *ptr1 = MALLOC(NUM(56));
+	void *ptr2 = MALLOC(NUM(96));
+	void *ptr3 = MALLOC(NUM(356));
+	FREE(ptr1);
+	FREE(ptr2);
+	void *ptr4 = MALLOC(NUM(2096));
+	FREE(ptr3);
+	void *ptr5 = MALLOC(NUM(256));
+	void *ptr6 = MALLOC(NUM(196));
+//	void *b = __realloc(*(void **)info, NUM(REALLOC_SIZE));
+	FREE(ptr6);
+	FREE(ptr5);
+	void *ptr7 = MALLOC(NUM(1096));
+	FREE(ptr7);
+	void *ptr8 = MALLOC(NUM(16));
+	FREE(ptr8);
+	void *ptr9 = MALLOC(NUM(10056));
+	FREE(ptr9);
+//	void *c = __realloc(ptr4, NUM(3000));
 
 	pthread_exit(NULL);
 }

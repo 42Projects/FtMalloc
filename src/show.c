@@ -109,11 +109,11 @@ show_alloc_mem (void) {
 		buff_string("\x1b[0m\n", buffer, &offset);
 
 		t_bin *bin = arena->small_bins;
-		if (bin != NULL && __mchunk_type_match(bin, CHUNK_SMALL)) bin = bin->left;
+		if (bin != NULL && __mbin_type_is(bin, CHUNK_SMALL)) bin = bin->left;
 		explore_bin(bin, CHUNK_TINY, buffer, &offset, &arena_total);
 
 		bin = arena->small_bins;
-		if (bin != NULL && __mchunk_type_match(bin, CHUNK_TINY)) bin = bin->right;
+		if (bin != NULL && __mbin_type_is(bin, CHUNK_TINY)) bin = bin->right;
 		explore_bin(bin, CHUNK_SMALL, buffer, &offset, &arena_total);
 
 		bin = arena->large_bins;

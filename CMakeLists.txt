@@ -10,6 +10,7 @@ include_directories(tests)
 
 add_executable(ft_malloc
         include/malloc.h
+        src/arena.c
         src/free.c
         src/malloc.c
         src/mallocp.h
