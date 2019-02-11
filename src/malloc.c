@@ -199,9 +199,6 @@ jmalloc (size_t size, int zero_set) {
 	pthread_mutex_lock(&main_arena_mutex);
 
 	if (__builtin_expect(g_arena_data == NULL, 0)) {
-
-		write(1, "YES\n", 4);
-
 		long pagesize = sysconf(_SC_PAGESIZE);
 		arena_data.pagesize = (unsigned long)pagesize;
 		g_arena_data = &arena_data;
@@ -336,7 +333,7 @@ void
 		return chunk->user_area;
 	}
 
-	/* Otherwise, we have to find a new chunk, copy the data to it and free the current chunk. */
+	/* Otherwise, we have to find a new chunk, copy the content to it and free the current chunk. */
 	int chunk_type = __mchunk_get_type(bin, chunk);
 	void *user_area = find_chunk(arena, req_size - sizeof(t_chunk), chunk_type, 0);
 	memcpy(user_area, chunk->user_area, __mchunk_size(chunk) - sizeof(t_chunk));
