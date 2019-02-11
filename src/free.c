@@ -79,7 +79,7 @@ remove_chunk (t_arena *arena, t_bin *bin, t_chunk *chunk) {
 	}
 
 }
-#include <stdio.h>
+
 void
 free(void *ptr) {
 
