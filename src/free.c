@@ -50,8 +50,11 @@ remove_chunk (t_arena *arena, t_bin *bin, t_chunk *chunk) {
 
 	/* If the new max chunk size of the bin is larger than that of the first bin in the list, reorder the list. */
 	t_bin *first_bin = __mbin_main(bin);
-	if (__mbin_type_is(bin, CHUNK_TINY)) first_bin = first_bin->left;
-	else first_bin = first_bin->right;
+	if (__mbin_type_is(bin, CHUNK_TINY)) {
+		first_bin = first_bin->left;
+	} else {
+		first_bin = first_bin->right;
+	}
 
 	if (first_bin != NULL && bin != first_bin && bin->max_chunk_size > first_bin->max_chunk_size) {
 		t_bin *main_bin = __mbin_main(bin);
@@ -74,10 +77,11 @@ remove_chunk (t_arena *arena, t_bin *bin, t_chunk *chunk) {
 
 		}
 	}
-}
 
+}
+#include <stdio.h>
 void
-__free (void *ptr) {
+free(void *ptr) {
 
 	if (ptr == NULL) return;
 

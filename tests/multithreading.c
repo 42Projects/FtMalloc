@@ -7,12 +7,12 @@
 #include <unistd.h>
 #include <string.h>
 
-#define NUM_THREAD 32000
+#define NUM_THREAD 620
 #define FIRST_MALLOC_SIZE 40
 #define SECOND_MALLOC_SIZE 340
 #define NUM(x) (x)
-#define MALLOC(x) (__malloc(x))
-#define FREE(x) (__free(x))
+#define MALLOC(x) (malloc(x))
+#define FREE(x) (free(x))
 #define REALLOC_SIZE 5000
 
 static void
@@ -37,7 +37,7 @@ static void
 	FREE(ptr3);
 	void *ptr5 = MALLOC(NUM(256));
 	void *ptr6 = MALLOC(NUM(196));
-//	void *b = __realloc(*(void **)info, NUM(REALLOC_SIZE));
+	void *b = realloc(*(void **)info, NUM(REALLOC_SIZE));
 	FREE(ptr6);
 	FREE(ptr5);
 	void *ptr7 = MALLOC(NUM(1096));
@@ -46,7 +46,7 @@ static void
 	FREE(ptr8);
 	void *ptr9 = MALLOC(NUM(10056));
 	FREE(ptr9);
-//	void *c = __realloc(ptr4, NUM(3000));
+	void *c = realloc(ptr4, NUM(3000));
 
 	pthread_exit(NULL);
 }

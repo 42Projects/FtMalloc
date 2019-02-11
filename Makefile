@@ -17,7 +17,6 @@ SYMLINK :=				libft_malloc.so
 CC :=					gcc
 
 #	Flags
-DEBUG =					
 FLAGS =					-g3 -Wall -Wextra -Wcast-align -Wconversion -Werror 
 ifeq ($(OS), Darwin)
 	THREADS :=			$(shell sysctl -n hw.ncpu)
@@ -68,11 +67,6 @@ $(OBJDIR)%.o: %.c
 clean:
 	@/bin/rm -rf $(OBJDIR)
 	@printf  "\033[1;32mCleaning object files -> \033[91m$(NAME)\033[0m\033[1;32m:\033[0m%-2s\033[32m[✔]\033[0m\n"
-
-debug: CC := clang
-debug: DEBUG := -g3 -fsanitize=address -fno-omit-frame-pointer -fsanitize=undefined 
-debug: FLAGS :=
-debug: re
 
 fast:
 	@$(MAKE) --no-print-directory $(FAST)

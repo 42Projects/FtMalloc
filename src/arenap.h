@@ -44,7 +44,7 @@ enum					e_type {
 # define __mchunk_get_type(bin, chunk) \
 (__mbin_type_is(bin, CHUNK_LARGE) ? CHUNK_LARGE : __mbin_type_is(bin, CHUNK_TINY) ? CHUNK_TINY : CHUNK_SMALL)
 # define __mchunk_invalid(chunk) \
-((chunk->size & FLAG_MASK) != (1UL << CHUNK_USED) || __mabs((ssize_t)chunk - (ssize_t)chunk->bin) > (1UL << 32))
+((chunk->size & FLAG_MASK) != (1UL << CHUNK_USED) || (unsigned long)__mabs((long)chunk - (long)chunk->bin) > (1UL << 32))
 # define __mchunk_is_used(chunk) (chunk->size & (1UL << CHUNK_USED))
 # define __mchunk_next(chunk) ((t_chunk *)((unsigned long)chunk + __mchunk_size(chunk)))
 # define __mchunk_not_used(chunk) (__mchunk_is_used(chunk) == 0)
@@ -55,7 +55,7 @@ enum					e_type {
 typedef struct			s_chunk {
 	unsigned long		size;
 	struct s_bin		*bin;
-	__ptr_t				user_area[];
+	void				*user_area[];
 }						t_chunk;
 
 typedef struct 			s_bin {

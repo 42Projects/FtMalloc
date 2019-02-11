@@ -66,9 +66,7 @@ create_new_bin (t_arena *arena, unsigned long size, int chunk_type, pthread_mute
 	bin->arena = arena;
 	bin->max_chunk_size = bin->free_size;
 	bin->chunk->size = bin->free_size;
-
 	__marena_update_max_chunks(bin, 0);
-
 	return bin;
 }
 
@@ -87,6 +85,7 @@ create_user_area (t_bin *bin, t_chunk *chunk, size_t size, int zero_set) {
 
 	unsigned long old_size = __mchunk_size(chunk);
 	chunk->size = size | (1UL << CHUNK_USED);
+
 	chunk->bin = bin;
 	t_chunk *next_chunk = __mchunk_next(chunk);
 
@@ -95,7 +94,7 @@ create_user_area (t_bin *bin, t_chunk *chunk, size_t size, int zero_set) {
 
 	if (zero_set == 1) memset(chunk->user_area, 0, size - sizeof(t_chunk));
 
-	return (void *)chunk->user_area;
+	return chunk->user_area;
 }
 
 static void *
@@ -241,20 +240,22 @@ jmalloc (size_t size, int zero_set) {
 
 			if (pthread_mutex_trylock(&new_arena_mutex) == 0) {
 
-				if (arena_data.arena_count < M_ARENA_MAX) {
-					arena_index = arena_data.arena_count - 1;
+				if (arena_index == arena_data.arena_count - 1 && arena_data.arena_count < M_ARENA_MAX) {
 					++arena_data.arena_count;
 					arena = NULL;
 					break;
 
-				} else pthread_mutex_unlock(&new_arena_mutex);
+				} else {
+
+					pthread_mutex_unlock(&new_arena_mutex);
+				}
 			}
 
-			arena = &arena_data.arenas[(arena_index = 0)];
-			continue;
+			arena_index = -1;
 		}
 
-		arena = &arena_data.arenas[arena_index++];
+		++arena_index;
+		arena = &arena_data.arenas[arena_index];
 	}
 
 	/* All arenas are occupied by other threads but M_ARENA_MAX isn't reached. Let's just create a new one. */
@@ -290,12 +291,12 @@ jmalloc (size_t size, int zero_set) {
 }
 
 void
-*__realloc (void *ptr, size_t size) {
+*realloc(void *ptr, size_t size) {
 
 	if (ptr == NULL) {
-		return __malloc(size);
+		return malloc(size);
 	} else if (size == 0) {
-		__free(ptr);
+		free(ptr);
 		return NULL;
 	}
 
@@ -315,6 +316,7 @@ void
 	t_chunk *next_chunk = __mchunk_next(chunk);
 	unsigned long req_size = ((size + 0xfUL) & ~0xfUL) + sizeof(t_chunk);
 
+	/* If next chunk is available and the cumulative size is enough, extend the current chunk. */
 	if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)
 		&& __mchunk_size(chunk) + __mchunk_size(next_chunk) >= req_size) {
 
@@ -331,23 +333,23 @@ void
 		return chunk->user_area;
 	}
 
+	/* Otherwise, we have to find a new chunk, copy the data to it and free the current chunk. */
 	int chunk_type = __mchunk_get_type(bin, chunk);
-	void *user_area = find_chunk(arena, size, chunk_type, 0);
+	void *user_area = find_chunk(arena, req_size - sizeof(t_chunk), chunk_type, 0);
 	memcpy(user_area, chunk->user_area, __mchunk_size(chunk) - sizeof(t_chunk));
 	remove_chunk(arena, bin, chunk);
-
 	pthread_mutex_unlock(&arena->mutex);
 	return user_area;
 }
 
 void *
-__malloc (size_t size) {
+malloc(size_t size) {
 
 	return jmalloc(size, 0);
 }
 
 void *
-__calloc (size_t nmemb, size_t size) {
+calloc(size_t nmemb, size_t size) {
 
 	return jmalloc(nmemb * size, 1);
 }
