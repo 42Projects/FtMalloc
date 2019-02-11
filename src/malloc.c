@@ -235,7 +235,7 @@ jmalloc (size_t size, int zero_set) {
 	/* Look for an open arena. */
 	t_arena *arena = &arena_data.arenas[0];
 	int arena_index = 0;
-	for (; pthread_mutex_trylock(&arena->mutex) != 0; arena_index++) {
+	while (pthread_mutex_trylock(&arena->mutex) != 0) {
 
 		if (arena_index == arena_data.arena_count - 1) {
 
@@ -247,16 +247,14 @@ jmalloc (size_t size, int zero_set) {
 					arena = NULL;
 					break;
 
-				} else {
-
-					pthread_mutex_unlock(&new_arena_mutex);
-				}
+				} else pthread_mutex_unlock(&new_arena_mutex);
 			}
 
-			arena_index = 0;
+			arena = &arena_data.arenas[(arena_index = 0)];
+			continue;
 		}
 
-		arena = &arena_data.arenas[arena_index];
+		arena = &arena_data.arenas[arena_index++];
 	}
 
 	/* All arenas are occupied by other threads but M_ARENA_MAX isn't reached. Let's just create a new one. */
