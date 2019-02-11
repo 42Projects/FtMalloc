@@ -10,13 +10,17 @@ include_directories(tests)
 
 add_executable(ft_malloc
         include/malloc.h
-        src/arena.c
         src/free.c
         src/malloc.c
-        src/mallocp.h
         src/show.c
         src/showp.h
         src/arenap.h
-        tests/test0.c
-        tests/test1.c
-        tests/multithreading.c)
+        test/test0.c
+        test/test1.c
+        test/test2.c
+        test/test3.c
+        test/test3_bis.c
+        test/test4.c
+        test/test5.c
+        test/bonus_threading.c
+        test/multithreading.c)

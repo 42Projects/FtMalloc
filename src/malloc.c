@@ -199,6 +199,9 @@ jmalloc (size_t size, int zero_set) {
 	pthread_mutex_lock(&main_arena_mutex);
 
 	if (__builtin_expect(g_arena_data == NULL, 0)) {
+
+		write(1, "YES\n", 4);
+
 		long pagesize = sysconf(_SC_PAGESIZE);
 		arena_data.pagesize = (unsigned long)pagesize;
 		g_arena_data = &arena_data;
