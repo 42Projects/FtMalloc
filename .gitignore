@@ -4,4 +4,10 @@ cmake-build-debug
 libft_malloc*
 test0
 test1
+test2
+test3
+test4
+test5
 multithreading_test
+diff-pr.txt
+diff-pr-2.txt
