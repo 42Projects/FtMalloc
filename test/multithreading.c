@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 
-#define NUM_THREAD 620
+#define NUM_THREAD 32000
 #define FIRST_MALLOC_SIZE 40
 #define SECOND_MALLOC_SIZE 340
 #define NUM(x) (x)

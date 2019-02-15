@@ -294,10 +294,10 @@ void
 *realloc(void *ptr, size_t size) {
 
 	if (ptr == NULL) {
-		return malloc(size);
-	} else if (size == 0) {
-		free(ptr);
-		return NULL;
+		return jmalloc(size, 0);
+	} else {
+		if (size == 0) free(ptr);
+		if (size == 0 || size >= (1UL << SIZE_THRESHOLD)) return NULL;
 	}
 
 	t_chunk *chunk = (t_chunk *)ptr - 1;
@@ -334,8 +334,15 @@ void
 	}
 
 	/* Otherwise, we have to find a new chunk, copy the content to it and free the current chunk. */
-	int chunk_type = __mchunk_get_type(bin, chunk);
-	void *user_area = find_chunk(arena, req_size - sizeof(t_chunk), chunk_type, 0);
+	size = req_size - sizeof(t_chunk);
+	int chunk_type;
+	if (size > SIZE_SMALL) {
+		chunk_type = CHUNK_LARGE;
+	} else {
+		chunk_type = (size <= SIZE_TINY) ? CHUNK_TINY : CHUNK_SMALL;
+	}
+
+	void *user_area = find_chunk(arena, size, chunk_type, 0);
 	memcpy(user_area, chunk->user_area, __mchunk_size(chunk) - sizeof(t_chunk));
 	remove_chunk(arena, bin, chunk);
 	pthread_mutex_unlock(&arena->mutex);
