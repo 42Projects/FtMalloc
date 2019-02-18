@@ -41,8 +41,6 @@ enum					e_type {
 # define __mbin_end(bin) ((void *)((unsigned long)bin + __mbin_size(bin)))
 # define __mbin_main(bin) (__mbin_type_is(bin, CHUNK_LARGE) ? arena->large_bins : arena->small_bins)
 # define __mbin_size(bin) (bin->size & SIZE_MASK)
-# define __mchunk_get_type(bin, chunk) \
-(__mbin_type_is(bin, CHUNK_LARGE) ? CHUNK_LARGE : __mbin_type_is(bin, CHUNK_TINY) ? CHUNK_TINY : CHUNK_SMALL)
 # define __mchunk_invalid(chunk) \
 ((chunk->size & FLAG_MASK) != (1UL << CHUNK_USED) || (unsigned long)__mabs((long)chunk - (long)chunk->bin) > (1UL << 32))
 # define __mchunk_is_used(chunk) (chunk->size & (1UL << CHUNK_USED))

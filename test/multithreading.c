@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 
-#define NUM_THREAD 32000
+#define NUM_THREAD 10200
 #define FIRST_MALLOC_SIZE 40
 #define SECOND_MALLOC_SIZE 340
 #define NUM(x) (x)
@@ -27,26 +27,26 @@ static void
 *second_call (void *info) {
 
 	void *ret = MALLOC(NUM(SECOND_MALLOC_SIZE));
-	FREE(ret);
+//	FREE(ret);
 	void *ptr1 = MALLOC(NUM(56));
 	void *ptr2 = MALLOC(NUM(96));
 	void *ptr3 = MALLOC(NUM(356));
-	FREE(ptr1);
-	FREE(ptr2);
+//	FREE(ptr1);
+//	FREE(ptr2);
 	void *ptr4 = MALLOC(NUM(2096));
-	FREE(ptr3);
+//	FREE(ptr3);
 	void *ptr5 = MALLOC(NUM(256));
 	void *ptr6 = MALLOC(NUM(196));
-	void *b = realloc(*(void **)info, NUM(REALLOC_SIZE));
-	FREE(ptr6);
-	FREE(ptr5);
+//	void *b = realloc(*(void **)info, NUM(REALLOC_SIZE));
+//	FREE(ptr6);
+//	FREE(ptr5);
 	void *ptr7 = MALLOC(NUM(1096));
-	FREE(ptr7);
+//	FREE(ptr7);
 	void *ptr8 = MALLOC(NUM(16));
-	FREE(ptr8);
+//	FREE(ptr8);
 	void *ptr9 = MALLOC(NUM(10056));
-	FREE(ptr9);
-	void *c = realloc(ptr4, NUM(3000));
+//	FREE(ptr9);
+//	void *c = realloc(ptr4, NUM(3000));
 
 	pthread_exit(NULL);
 }
