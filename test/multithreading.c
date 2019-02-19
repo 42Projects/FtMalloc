@@ -3,12 +3,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define NUM_THREAD 3200
-#define FIRST_MALLOC_SIZE 40
-#define SECOND_MALLOC_SIZE 340
-#define NUM(x) (rand() % x)
+#define NUM_THREAD 720
+#define FIRST_MALLOC_SIZE 40000
+#define SECOND_MALLOC_SIZE 34
+#define NUM(x) (rand() % x + 16)
 #define MALLOC(x) (malloc(x))
 #define FREE(x) (free(x))
+#define REALLOC(x, y) (realloc(x, y))
 #define REALLOC_SIZE 5000
 
 
@@ -35,7 +36,7 @@ static void
 	FREE(ptr3);
 	void *ptr5 = MALLOC(NUM(256));
 	void *ptr6 = MALLOC(NUM(196));
-	void *b = realloc(*(void **)info, NUM(REALLOC_SIZE));
+	void *b = REALLOC(*(void **)info, NUM(REALLOC_SIZE));
 	FREE(ptr6);
 	FREE(ptr5);
 	void *ptr7 = MALLOC(NUM(1096));
@@ -46,8 +47,11 @@ static void
 	FREE(ptr9);
 
 	ptr1 = MALLOC(NUM(56));
+	FREE(ptr1);
 	ptr2 = MALLOC(NUM(96));
+	FREE(ptr2);
 	ptr3 = MALLOC(NUM(356));
+	FREE(ptr3);
 
 	ret = MALLOC(NUM(SECOND_MALLOC_SIZE));
 	FREE(ret);
@@ -60,7 +64,9 @@ static void
 	FREE(ptr3);
 	ptr5 = MALLOC(NUM(256));
 	ptr6 = MALLOC(NUM(196));
-	b = realloc(b, NUM(REALLOC_SIZE));
+
+	b = REALLOC(b, NUM(REALLOC_SIZE));
+	FREE(b);
 	FREE(ptr6);
 	FREE(ptr5);
 	ptr7 = MALLOC(NUM(1096));
@@ -71,10 +77,14 @@ static void
 	FREE(ptr9);
 
 	ptr1 = MALLOC(NUM(56));
+	FREE(ptr1);
 	ptr2 = MALLOC(NUM(96));
+	FREE(ptr2);
 	ptr3 = MALLOC(NUM(356));
+	FREE(ptr3);
 
-	void *c = realloc(ptr4, NUM(3000));
+	b = REALLOC(ptr4, NUM(3000));
+	FREE(b);
 
 	pthread_exit(NULL);
 }

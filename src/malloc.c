@@ -1,6 +1,5 @@
 #include "malloc.h"
 #include "arenap.h"
-#include <stdio.h>
 
 
 t_arena_data	*g_arena_data = NULL;
@@ -145,6 +144,7 @@ find_chunk (t_arena *arena, unsigned long size, int chunk_type, int zero_set) {
 				if (tmp != NULL) tmp->left = bin;
 
 			}
+
 		} else if (chunk_type == CHUNK_LARGE) {
 			arena->large_bins = bin;
 		} else {
@@ -176,10 +176,11 @@ jmalloc (size_t size, int zero_set) {
 							new_arena_mutex = PTHREAD_MUTEX_INITIALIZER;
 	static t_arena_data		arena_data = { .arena_count = 1 };
 
-
+	
 	size = (size + 0xfUL) & ~0xfUL;
+
 	int chunk_type;
-	if (size >= (1UL << SIZE_THRESHOLD)) {
+	if (size == 0 || size >= (1UL << SIZE_THRESHOLD)) {
 		return NULL;
 	} else if (size > SIZE_SMALL) {
 		chunk_type = CHUNK_LARGE;
@@ -284,12 +285,13 @@ void
 	}
 
 	t_chunk *chunk = (t_chunk *)ptr - 1;
+	if (test_valid_chunk(chunk) != 0) {
+		if (M_ABORT_SET != 0) {
+			(void)(write(STDERR_FILENO, "realloc(): invalid pointer\n", 27) + 1);
+			abort();
+		}
 
-	/* If the pointer is not aligned on a 16bytes boundary, it is invalid by definition. */
-	if (g_arena_data == NULL || (unsigned long)chunk % 16UL != 0 || __mchunk_invalid(chunk)) {
-		(void)(write(STDERR_FILENO, "realloc(): invalid pointer\n", 27) + 1);
 		return NULL;
-//		abort();
 	}
 
 	if (__mchunk_size(chunk) - sizeof(t_chunk) >= size) return ptr;
@@ -299,6 +301,7 @@ void
 	pthread_mutex_lock(&arena->mutex);
 	t_chunk *next_chunk = __mchunk_next(chunk);
 	unsigned long req_size = ((size + 0xfUL) & ~0xfUL) + sizeof(t_chunk);
+
 	/* If next chunk is available and the cumulative size is enough, extend the current chunk. */
 	if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)
 		&& __mchunk_size(chunk) + __mchunk_size(next_chunk) >= req_size) {
@@ -327,7 +330,7 @@ void
 
 	void *user_area = find_chunk(arena, size, chunk_type, 0);
 	memcpy(user_area, chunk->user_area, __mchunk_size(chunk) - sizeof(t_chunk));
-	remove_chunk(arena, bin, chunk);
+	remove_chunk(bin, chunk);
 	pthread_mutex_unlock(&arena->mutex);
 	return user_area;
 }

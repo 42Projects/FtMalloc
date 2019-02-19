@@ -11,11 +11,16 @@
 /* For abort. */
 # include <stdlib.h>
 
-# define CHUNKS_PER_POOL 100
+/* Environment variables */
 # define M_ARENA_MAX 8
+# define M_ABORT_SET 0
+
+
+# define CHUNKS_PER_POOL 100
 # define SIZE_TINY 256
 # define SIZE_SMALL 4096
 # define SIZE_THRESHOLD 59
+# define SIZE_MASK ((1UL << (SIZE_THRESHOLD + 1)) - 1)
 
 enum					e_type {
 	CHUNK_USED = SIZE_THRESHOLD + 1,
@@ -24,10 +29,6 @@ enum					e_type {
 	CHUNK_LARGE
 };
 
-# define SIZE_MASK ((1UL << (SIZE_THRESHOLD + 1)) - 1)
-# define FLAG_MASK (~SIZE_MASK)
-
-# define __mabs(x) ({ __typeof__(x) _x = (x); _x < 0 ? -_x : _x; })
 # define __marena_update_max_chunks(bin, old_size)													\
 ({ 																									\
 	if (__mbin_type_is(bin, CHUNK_TINY) && (old_size == bin->arena->max_chunk_tiny					\
@@ -41,8 +42,6 @@ enum					e_type {
 # define __mbin_end(bin) ((void *)((unsigned long)bin + __mbin_size(bin)))
 # define __mbin_main(bin) (__mbin_type_is(bin, CHUNK_LARGE) ? arena->large_bins : arena->small_bins)
 # define __mbin_size(bin) (bin->size & SIZE_MASK)
-# define __mchunk_invalid(chunk) \
-((chunk->size & FLAG_MASK) != (1UL << CHUNK_USED) || (unsigned long)__mabs((long)chunk - (long)chunk->bin) > (1UL << 32))
 # define __mchunk_is_used(chunk) (chunk->size & (1UL << CHUNK_USED))
 # define __mchunk_next(chunk) ((t_chunk *)((unsigned long)chunk + __mchunk_size(chunk)))
 # define __mchunk_not_used(chunk) (__mchunk_is_used(chunk) == 0)
@@ -82,6 +81,7 @@ typedef struct 			s_arena_data {
 
 extern t_arena_data		*g_arena_data;
 
-void					remove_chunk(t_arena *arena, t_bin *bin, t_chunk *chunk);
+void					remove_chunk(t_bin *bin, t_chunk *chunk);
+int 					test_valid_chunk(t_chunk *chunk);
 
 #endif /* __ARENA_PRIVATE_H */
