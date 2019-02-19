@@ -1,7 +1,7 @@
 #include "showp.h"
 
 
-static inline void
+static void
 flush_buffer (char *buffer, size_t *offset) {
 
 	buffer[*offset] = '\0';
@@ -45,7 +45,7 @@ buff_number (int base, unsigned long number, char *buffer, size_t *offset) {
 	if (*offset == BUFF_SIZE - 1) flush_buffer(buffer, offset);
 }
 
-static inline void
+static void
 explore_bin (t_bin *bin, int chunk_type, char *buffer, size_t *offset, size_t *arena_total) {
 
 	while (bin != NULL) {
@@ -65,7 +65,6 @@ explore_bin (t_bin *bin, int chunk_type, char *buffer, size_t *offset, size_t *a
 
 		t_chunk *chunk = bin->chunk;
 		while (chunk != __mbin_end(bin)) {
-
 			if (__mchunk_is_used(chunk)) {
 				size_t chunk_size = __mchunk_size(chunk) - sizeof(t_chunk);
 
@@ -78,10 +77,8 @@ explore_bin (t_bin *bin, int chunk_type, char *buffer, size_t *offset, size_t *a
 
 				*arena_total += chunk_size;
 			}
-
 			chunk = __mchunk_next(chunk);
 		}
-
 		bin = (chunk_type == CHUNK_TINY) ? bin->left : bin->right;
 	}
 }

@@ -1,19 +1,16 @@
 #include "malloc.h"
-#include <limits.h>
 #include <pthread.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
-#include <string.h>
 
-#define NUM_THREAD 10200
+#define NUM_THREAD 3200
 #define FIRST_MALLOC_SIZE 40
 #define SECOND_MALLOC_SIZE 340
-#define NUM(x) (x)
+#define NUM(x) (rand() % x)
 #define MALLOC(x) (malloc(x))
 #define FREE(x) (free(x))
 #define REALLOC_SIZE 5000
+
 
 static void
 *race_condition (void *info) {
@@ -27,26 +24,57 @@ static void
 *second_call (void *info) {
 
 	void *ret = MALLOC(NUM(SECOND_MALLOC_SIZE));
-//	FREE(ret);
+	FREE(ret);
 	void *ptr1 = MALLOC(NUM(56));
 	void *ptr2 = MALLOC(NUM(96));
 	void *ptr3 = MALLOC(NUM(356));
-//	FREE(ptr1);
-//	FREE(ptr2);
+	FREE(ptr1);
+	FREE(ptr2);
 	void *ptr4 = MALLOC(NUM(2096));
-//	FREE(ptr3);
+	FREE(ptr4);
+	FREE(ptr3);
 	void *ptr5 = MALLOC(NUM(256));
 	void *ptr6 = MALLOC(NUM(196));
-//	void *b = realloc(*(void **)info, NUM(REALLOC_SIZE));
-//	FREE(ptr6);
-//	FREE(ptr5);
+	void *b = realloc(*(void **)info, NUM(REALLOC_SIZE));
+	FREE(ptr6);
+	FREE(ptr5);
 	void *ptr7 = MALLOC(NUM(1096));
-//	FREE(ptr7);
+	FREE(ptr7);
 	void *ptr8 = MALLOC(NUM(16));
-//	FREE(ptr8);
+	FREE(ptr8);
 	void *ptr9 = MALLOC(NUM(10056));
-//	FREE(ptr9);
-//	void *c = realloc(ptr4, NUM(3000));
+	FREE(ptr9);
+
+	ptr1 = MALLOC(NUM(56));
+	ptr2 = MALLOC(NUM(96));
+	ptr3 = MALLOC(NUM(356));
+
+	ret = MALLOC(NUM(SECOND_MALLOC_SIZE));
+	FREE(ret);
+	ptr1 = MALLOC(NUM(56));
+	ptr2 = MALLOC(NUM(96));
+	ptr3 = MALLOC(NUM(356));
+	FREE(ptr1);
+	FREE(ptr2);
+	ptr4 = MALLOC(NUM(2096));
+	FREE(ptr3);
+	ptr5 = MALLOC(NUM(256));
+	ptr6 = MALLOC(NUM(196));
+	b = realloc(b, NUM(REALLOC_SIZE));
+	FREE(ptr6);
+	FREE(ptr5);
+	ptr7 = MALLOC(NUM(1096));
+	FREE(ptr7);
+	ptr8 = MALLOC(NUM(16));
+	FREE(ptr8);
+	ptr9 = MALLOC(NUM(10056));
+	FREE(ptr9);
+
+	ptr1 = MALLOC(NUM(56));
+	ptr2 = MALLOC(NUM(96));
+	ptr3 = MALLOC(NUM(356));
+
+	void *c = realloc(ptr4, NUM(3000));
 
 	pthread_exit(NULL);
 }
@@ -68,7 +96,7 @@ main (void) {
 	}
 
 	/* Test 2 */
-	printf("Second batch of threads is calling malloc of data %d...\n", SECOND_MALLOC_SIZE);
+	printf("Second batch of threads...\n");
 	for (int k = 0; k < NUM_THREAD; k++) {
 		pthread_create(th2 + k, NULL, second_call, info + k);
 	}
@@ -76,7 +104,7 @@ main (void) {
 		pthread_join(th2[k], NULL);
 	}
 
-//	show_alloc_mem();
+	show_alloc_mem();
 
 	return 0;
 }

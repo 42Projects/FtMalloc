@@ -1,5 +1,6 @@
 #include "malloc.h"
 #include "arenap.h"
+#include <stdio.h>
 
 
 t_arena_data	*g_arena_data = NULL;
@@ -8,28 +9,22 @@ static void
 update_max_chunk (t_bin *bin, t_chunk *next_chunk, unsigned long old_size) {
 
 	unsigned long req_size = __mbin_type_is(bin, CHUNK_TINY) ? SIZE_TINY : SIZE_SMALL;
-
 	if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk) && __mchunk_size(next_chunk) >= req_size) {
-
 		bin->max_chunk_size = __mchunk_size(next_chunk);
 	} else {
-
 		t_chunk *biggest_chunk = bin->chunk;
 		unsigned long remaining = 0;
 		while (biggest_chunk != __mbin_end(bin)) {
-
 			if (__mchunk_not_used(biggest_chunk)) {
 
 				if (__mchunk_size(biggest_chunk) > remaining) remaining = __mchunk_size(biggest_chunk);
 				if (remaining >= req_size) break;
-			}
 
+			}
 			biggest_chunk = __mchunk_next(biggest_chunk);
 		}
-
 		bin->max_chunk_size = remaining;
 	}
-
 	__marena_update_max_chunks(bin, old_size);
 }
 
@@ -67,6 +62,7 @@ create_new_bin (t_arena *arena, unsigned long size, int chunk_type, pthread_mute
 	bin->max_chunk_size = bin->free_size;
 	bin->chunk->size = bin->free_size;
 	__marena_update_max_chunks(bin, 0);
+
 	return bin;
 }
 
@@ -89,12 +85,12 @@ create_user_area (t_bin *bin, t_chunk *chunk, size_t size, int zero_set) {
 	t_chunk *next_chunk = __mchunk_next(chunk);
 
 	if (next_chunk != __mbin_end(bin) && next_chunk->size == 0) next_chunk->size = old_size - size;
-	if (old_size == bin->max_chunk_size) update_max_chunk(bin, next_chunk, old_size);
 	if (zero_set == 1) memset(chunk->user_area, 0, size - sizeof(t_chunk));
+	if (old_size == bin->max_chunk_size) update_max_chunk(bin, next_chunk, old_size);
 
 	return chunk->user_area;
 }
-#include <stdio.h>
+
 static void *
 find_chunk (t_arena *arena, unsigned long size, int chunk_type, int zero_set) {
 
@@ -130,7 +126,6 @@ find_chunk (t_arena *arena, unsigned long size, int chunk_type, int zero_set) {
 		*/
 
 		t_bin *main_bin = (chunk_type == CHUNK_LARGE) ? arena->large_bins : arena->small_bins;
-
 		if (main_bin != NULL) {
 			t_bin *tmp = (chunk_type == CHUNK_TINY) ? main_bin->left : main_bin->right;
 
@@ -150,16 +145,13 @@ find_chunk (t_arena *arena, unsigned long size, int chunk_type, int zero_set) {
 				if (tmp != NULL) tmp->left = bin;
 
 			}
-
 		} else if (chunk_type == CHUNK_LARGE) {
 			arena->large_bins = bin;
 		} else {
 			arena->small_bins = bin;
 		}
 
-		void *user_area = create_user_area(bin, bin->chunk, size, zero_set);
-		pthread_mutex_unlock(&arena->mutex);
-		return user_area;
+		return create_user_area(bin, bin->chunk, size, zero_set);
 	}
 
 	/*
@@ -171,26 +163,10 @@ find_chunk (t_arena *arena, unsigned long size, int chunk_type, int zero_set) {
 
 	t_chunk *chunk = bin->chunk;
 	while (__mchunk_is_used(chunk) || __mchunk_size(chunk) < required_size) {
-
-		if ((unsigned long)chunk >= (unsigned long)__mbin_end(bin)) {
-
-			chunk = bin->chunk;
-			dprintf(2, "BIN %p, BIN END = %p, CHUNK = %p, BIGGEST = %lu, REQUESTED = %lu\n", bin, __mbin_end(bin), chunk, bin->max_chunk_size, required_size);
-
-			while ((unsigned long)chunk < (unsigned long)__mbin_end(bin)) {
-				dprintf(2, "%sALLOCATED CHUNK OF SIZE %lu\n", __mchunk_is_used(chunk) ? "" : "NON ", __mchunk_size(chunk));
-				chunk = __mchunk_next(chunk);
-			}
-
-			abort();
-		}
-
 		chunk = __mchunk_next(chunk);
 	}
 
-	void *user_area = create_user_area(bin, chunk, size, zero_set);
-	pthread_mutex_unlock(&arena->mutex);
-	return user_area;
+	return create_user_area(bin, chunk, size, zero_set);
 }
 
 static void *
@@ -250,31 +226,23 @@ jmalloc (size_t size, int zero_set) {
 	t_arena *arena = &arena_data.arenas[0];
 	int arena_index = 0;
 	while (pthread_mutex_trylock(&arena->mutex) != 0) {
-
 		if (arena_index == arena_data.arena_count - 1) {
-
 			if (pthread_mutex_trylock(&new_arena_mutex) == 0) {
-
 				if (arena_index == arena_data.arena_count - 1 && arena_data.arena_count < M_ARENA_MAX) {
 					arena = NULL;
 					break;
-
 				} else {
-
 					pthread_mutex_unlock(&new_arena_mutex);
 				}
 			}
-
 			arena_index = -1;
 		}
-
 		++arena_index;
 		arena = &arena_data.arenas[arena_index];
 	}
 
 	/* All arenas are occupied by other threads but M_ARENA_MAX isn't reached. Let's just create a new one. */
 	if (arena == NULL) {
-
 		arena = &arena_data.arenas[arena_data.arena_count];
 		t_bin *bin = create_new_bin(arena, size, chunk_type, &new_arena_mutex);
 		if (bin == MAP_FAILED) return NULL;
@@ -320,7 +288,8 @@ void
 	/* If the pointer is not aligned on a 16bytes boundary, it is invalid by definition. */
 	if (g_arena_data == NULL || (unsigned long)chunk % 16UL != 0 || __mchunk_invalid(chunk)) {
 		(void)(write(STDERR_FILENO, "realloc(): invalid pointer\n", 27) + 1);
-		abort();
+		return NULL;
+//		abort();
 	}
 
 	if (__mchunk_size(chunk) - sizeof(t_chunk) >= size) return ptr;
@@ -330,7 +299,6 @@ void
 	pthread_mutex_lock(&arena->mutex);
 	t_chunk *next_chunk = __mchunk_next(chunk);
 	unsigned long req_size = ((size + 0xfUL) & ~0xfUL) + sizeof(t_chunk);
-
 	/* If next chunk is available and the cumulative size is enough, extend the current chunk. */
 	if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)
 		&& __mchunk_size(chunk) + __mchunk_size(next_chunk) >= req_size) {

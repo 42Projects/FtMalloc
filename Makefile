@@ -33,9 +33,7 @@ O_FLAG :=				-O0
 OBJDIR :=				./build/
 SRC_DIR :=				./src/
 
-SRC +=					free.c
-SRC +=					malloc.c
-SRC +=					show.c
+SRC +=					free.c malloc.c show.c
 
 #	Sources
 OBJECTS =				$(patsubst %.c,$(OBJDIR)%.o,$(SRCS))
