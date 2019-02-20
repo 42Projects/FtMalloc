@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <memory.h>
 
-#define NUM_THREAD 720
+#define NUM_THREAD 8
 #define FIRST_MALLOC_SIZE 40000
 #define SECOND_MALLOC_SIZE 34
 #define NUM(x) (x)

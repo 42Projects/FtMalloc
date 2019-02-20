@@ -174,9 +174,10 @@ jmalloc (size_t size, int zero_set) {
 
 	static pthread_mutex_t	main_arena_mutex = PTHREAD_MUTEX_INITIALIZER,
 							new_arena_mutex = PTHREAD_MUTEX_INITIALIZER;
-	static t_arena_data		arena_data = { .arena_count = 1 };
+	static t_arena_data		arena_data = { .arena_count = 1, .env = 0 };
 
 
+	/* Round the requested size to nearest 16 bytes. Allows us to always return aligned memory. */
 	size = (size + 0xfUL) & ~0xfUL;
 
 	int chunk_type;
@@ -195,6 +196,13 @@ jmalloc (size_t size, int zero_set) {
 		long pagesize = sysconf(_SC_PAGESIZE);
 		arena_data.pagesize = (unsigned long)pagesize;
 		g_arena_data = &arena_data;
+
+		/* Get environment variables. */
+		char *val = NULL;
+		if ((val = getenv("M_ABORT_ON_ERROR")) != NULL && val[0] == '1') g_arena_data->env |= M_ABORT_ON_ERROR;
+		if ((val = getenv("M_RELEASE")) != NULL && val[0] == '1') g_arena_data->env |= M_RELEASE;
+		if ((val = getenv("M_SHOW_HEXDUMP")) != NULL && val[0] == '1') g_arena_data->env |= M_SHOW_HEXDUMP;
+		if ((val = getenv("M_SHOW_UNALLOCATED")) != NULL && val[0] == '1') g_arena_data->env |= M_SHOW_UNALLOCATED;
 
 		t_bin *bin = create_new_bin(&arena_data.arenas[0], size, chunk_type, &main_arena_mutex);
 		if (bin == MAP_FAILED) return NULL;
@@ -285,9 +293,9 @@ void
 	}
 
 	t_chunk *chunk = (t_chunk *)ptr - 1;
-	if (test_valid_chunk(chunk) != 0) {
-		if (M_ABORT_SET != 0) {
-			(void)(write(STDERR_FILENO, "realloc(): invalid pointer\n", 27) + 1);
+	if (__builtin_expect(test_valid_chunk(chunk) != 0, 0)) {
+		if (g_arena_data->env & M_ABORT_ON_ERROR) {
+			(void)(write(STDERR_FILENO, "realloc(): invalid pointer\n", 27) << 1);
 			abort();
 		}
 
@@ -296,11 +304,12 @@ void
 
 	if (__mchunk_size(chunk) - sizeof(t_chunk) >= size) return ptr;
 
+
+	unsigned long req_size = ((size + 0xfUL) & ~0xfUL) + sizeof(t_chunk);
 	t_bin *bin = chunk->bin;
 	t_arena *arena = bin->arena;
 	pthread_mutex_lock(&arena->mutex);
 	t_chunk *next_chunk = __mchunk_next(chunk);
-	unsigned long req_size = ((size + 0xfUL) & ~0xfUL) + sizeof(t_chunk);
 
 	/* If next chunk is available and the cumulative size is enough, extend the current chunk. */
 	if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)

@@ -107,9 +107,9 @@ free(void *ptr) {
 	if (ptr == NULL) return;
 
 	t_chunk *chunk = (t_chunk *)ptr - 1;
-	if (test_valid_chunk(chunk) != 0) {
-		if (M_ABORT_SET != 0) {
-			(void)(write(STDERR_FILENO, "free(): invalid pointer\n", 24) + 1);
+	if (__builtin_expect(test_valid_chunk(chunk) != 0, 0)) {
+		if (g_arena_data->env & M_ABORT_ON_ERROR) {
+			(void)(write(STDERR_FILENO, "free(): invalid pointer\n", 24) << 1);
 			abort();
 		}
 

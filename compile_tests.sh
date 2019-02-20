@@ -1,4 +1,4 @@
-gcc -g3 test/multithreading.c -I include -L. -lft_malloc -pthread -o multithreading_test
+gcc test/multithreading.c -I include -L. -lft_malloc -pthread -o multithreading_test
 gcc test/bonus_threading.c -o bonus_threading
 gcc test/test0.c -o test0
 gcc test/test1.c -o test1

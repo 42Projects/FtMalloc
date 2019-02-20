@@ -65,7 +65,7 @@ explore_bin (t_bin *bin, int chunk_type, char *buffer, size_t *offset, size_t *a
 
 		t_chunk *chunk = bin->chunk;
 		while (chunk != __mbin_end(bin)) {
-			if (__mchunk_is_used(chunk)) {
+			if (__mchunk_is_used(chunk) || g_arena_data->env & M_SHOW_UNALLOCATED) {
 				size_t chunk_size = __mchunk_size(chunk) - sizeof(t_chunk);
 
 				buff_number(16, (unsigned long)chunk->user_area, buffer, offset);
@@ -95,9 +95,8 @@ show_alloc_mem (void) {
 		t_arena *arena = &g_arena_data->arenas[k];
 		size_t arena_total = 0;
 
-		buff_string("\n", buffer, &offset);
+		if (k != 0) buff_string("\n", buffer, &offset);
 
-		/* Display arena address. */
 		buff_string("\x1b[31mARENA AT ", buffer, &offset);
 		buff_number(16, (unsigned long)arena, buffer, &offset);
 
@@ -122,11 +121,4 @@ show_alloc_mem (void) {
 	}
 
 	flush_buffer(buffer, &offset);
-};
-
-void
-show_alloc_mem_ex (void) {
-
-	if (g_arena_data == NULL) return;
-
 };
