@@ -176,11 +176,11 @@ jmalloc (size_t size, int zero_set) {
 							new_arena_mutex = PTHREAD_MUTEX_INITIALIZER;
 	static t_arena_data		arena_data = { .arena_count = 1 };
 
-	
+
 	size = (size + 0xfUL) & ~0xfUL;
 
 	int chunk_type;
-	if (size == 0 || size >= (1UL << SIZE_THRESHOLD)) {
+	if (size >= (1UL << SIZE_THRESHOLD)) {
 		return NULL;
 	} else if (size > SIZE_SMALL) {
 		chunk_type = CHUNK_LARGE;
@@ -291,7 +291,7 @@ void
 			abort();
 		}
 
-		return NULL;
+		return ptr;
 	}
 
 	if (__mchunk_size(chunk) - sizeof(t_chunk) >= size) return ptr;
