@@ -2,11 +2,12 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <memory.h>
 
-#define NUM_THREAD 720
+#define NUM_THREAD 320
 #define FIRST_MALLOC_SIZE 40000
 #define SECOND_MALLOC_SIZE 34
-#define NUM(x) (rand() % x + 16)
+#define NUM(x) (x)
 #define MALLOC(x) (malloc(x))
 #define FREE(x) (free(x))
 #define REALLOC(x, y) (realloc(x, y))
@@ -25,25 +26,36 @@ static void
 *second_call (void *info) {
 
 	void *ret = MALLOC(NUM(SECOND_MALLOC_SIZE));
+	memset(ret, 'a', SECOND_MALLOC_SIZE);
 	FREE(ret);
-	void *ptr1 = MALLOC(NUM(56));
-	void *ptr2 = MALLOC(NUM(96));
-	void *ptr3 = MALLOC(NUM(356));
+	void *ptr1 = MALLOC(NUM(16));
+	memset(ptr1, 'a', 16);
+	void *ptr2 = MALLOC(NUM(16));
+	memset(ptr2, 'a', 16);
+	void *ptr3 = MALLOC(NUM(16));
+	memset(ptr3, 'a', 16);
 	FREE(ptr1);
 	FREE(ptr2);
-	void *ptr4 = MALLOC(NUM(2096));
+	void *ptr4 = MALLOC(NUM(16));
+	memset(ptr4, 'a', 16);
 	FREE(ptr4);
 	FREE(ptr3);
-	void *ptr5 = MALLOC(NUM(256));
-	void *ptr6 = MALLOC(NUM(196));
+	void *ptr5 = MALLOC(NUM(16));
+	memset(ptr5, 'a', 16);
+	void *ptr6 = MALLOC(NUM(16));
+	memset(ptr6, 'a', 16);
 	void *b = REALLOC(*(void **)info, NUM(REALLOC_SIZE));
+	memset(b, 'a', REALLOC_SIZE);
 	FREE(ptr6);
 	FREE(ptr5);
 	void *ptr7 = MALLOC(NUM(1096));
+	memset(ptr7, 'a', 1096);
 	FREE(ptr7);
 	void *ptr8 = MALLOC(NUM(16));
+	memset(ptr8, 'a', 16);
 	FREE(ptr8);
 	void *ptr9 = MALLOC(NUM(10056));
+	memset(ptr9, 'a', 10056);
 	FREE(ptr9);
 
 	ptr1 = MALLOC(NUM(56));

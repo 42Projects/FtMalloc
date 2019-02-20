@@ -40,7 +40,6 @@ enum					e_type {
 	}																								\
 })
 # define __mbin_end(bin) ((void *)((unsigned long)bin + __mbin_size(bin)))
-# define __mbin_main(bin) (__mbin_type_is(bin, CHUNK_LARGE) ? arena->large_bins : arena->small_bins)
 # define __mbin_size(bin) (bin->size & SIZE_MASK)
 # define __mchunk_is_used(chunk) (chunk->size & (1UL << CHUNK_USED))
 # define __mchunk_next(chunk) ((t_chunk *)((unsigned long)chunk + __mchunk_size(chunk)))

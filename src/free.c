@@ -80,8 +80,8 @@ remove_chunk (t_bin *bin, t_chunk *chunk) {
 
 		if  (__mbin_type_not(bin, CHUNK_LARGE)) __marena_update_max_chunks(bin, 0);
 
-		memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
 	} else {
+
 		chunk->size &= ~(1UL << CHUNK_USED);
 
 		/* Defragment memory. */
@@ -91,11 +91,14 @@ remove_chunk (t_bin *bin, t_chunk *chunk) {
 			memset(next_chunk, 0, sizeof(t_chunk));
 		}
 
-		if (__mchunk_size(chunk) > bin->max_chunk_size) {
-			bin->max_chunk_size = __mchunk_size(chunk);
+		if (chunk->size > bin->max_chunk_size) {
+			bin->max_chunk_size = chunk->size;
 			__marena_update_max_chunks(bin, 0);
 		}
 	}
+
+	/* Clear user area from garbage data. */
+	memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
 }
 
 void
