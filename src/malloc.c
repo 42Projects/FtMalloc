@@ -66,7 +66,7 @@ create_new_bin (t_arena *arena, unsigned long size, int chunk_type, pthread_mute
 }
 
 static void *
-create_user_area (t_bin *bin, t_chunk *chunk, size_t size, int zero_set) {
+create_user_area (t_bin *bin, t_chunk *chunk, size_t size) {
 
 	/*
 	   Populate chunk headers.
@@ -83,15 +83,18 @@ create_user_area (t_bin *bin, t_chunk *chunk, size_t size, int zero_set) {
 	chunk->bin = bin;
 	t_chunk *next_chunk = __mchunk_next(chunk);
 
-	if (next_chunk != __mbin_end(bin) && next_chunk->size == 0) next_chunk->size = old_size - size;
-	if (zero_set == 1) memset(chunk->user_area, 0, size - sizeof(t_chunk));
+	if (next_chunk != __mbin_end(bin) && old_size != size) {
+		next_chunk->size = old_size - size;
+		next_chunk->bin = bin;
+	}
+
 	if (old_size == bin->max_chunk_size) update_max_chunk(bin, next_chunk, old_size);
 
 	return chunk->user_area;
 }
 
 static void *
-find_chunk (t_arena *arena, unsigned long size, int chunk_type, int zero_set) {
+find_chunk (t_arena *arena, unsigned long size, int chunk_type) {
 
 	t_bin *bin = (chunk_type == CHUNK_LARGE) ? arena->large_bins : NULL;
 	unsigned long required_size = size + sizeof(t_chunk);
@@ -151,7 +154,7 @@ find_chunk (t_arena *arena, unsigned long size, int chunk_type, int zero_set) {
 			arena->small_bins = bin;
 		}
 
-		return create_user_area(bin, bin->chunk, size, zero_set);
+		return create_user_area(bin, bin->chunk, size);
 	}
 
 	/*
@@ -166,11 +169,11 @@ find_chunk (t_arena *arena, unsigned long size, int chunk_type, int zero_set) {
 		chunk = __mchunk_next(chunk);
 	}
 
-	return create_user_area(bin, chunk, size, zero_set);
+	return create_user_area(bin, chunk, size);
 }
 
-static void *
-jmalloc (size_t size, int zero_set) {
+void *
+malloc (size_t size) {
 
 	static pthread_mutex_t	main_arena_mutex = PTHREAD_MUTEX_INITIALIZER,
 							new_arena_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -217,7 +220,7 @@ jmalloc (size_t size, int zero_set) {
 		pthread_mutex_lock(&arena_data.arenas[0].mutex);
 		pthread_mutex_unlock(&main_arena_mutex);
 
-		void *user_area = create_user_area(bin, bin->chunk, size, zero_set);
+		void *user_area = create_user_area(bin, bin->chunk, size);
 		pthread_mutex_unlock(&arena_data.arenas[0].mutex);
 		return user_area;
 	}
@@ -267,7 +270,7 @@ jmalloc (size_t size, int zero_set) {
 		++arena_data.arena_count;
 		pthread_mutex_unlock(&new_arena_mutex);
 
-		void *user_area = create_user_area(bin, bin->chunk, size, zero_set);
+		void *user_area = create_user_area(bin, bin->chunk, size);
 		pthread_mutex_unlock(&arena->mutex);
 		return user_area;
 	}
@@ -277,7 +280,7 @@ jmalloc (size_t size, int zero_set) {
 	   enough to accommodate the user-requested size.
 	*/
 
-	void *user_area = find_chunk(arena, size, chunk_type, zero_set);
+	void *user_area = find_chunk(arena, size, chunk_type);
 	pthread_mutex_unlock(&arena->mutex);
 	return user_area;
 }
@@ -286,7 +289,7 @@ void
 *realloc(void *ptr, size_t size) {
 
 	if (ptr == NULL) {
-		return jmalloc(size, 0);
+		return malloc(size);
 	} else {
 		if (size == 0) free(ptr);
 		if (size == 0 || size >= (1UL << SIZE_THRESHOLD)) return NULL;
@@ -337,7 +340,7 @@ void
 		chunk_type = (size <= SIZE_TINY) ? CHUNK_TINY : CHUNK_SMALL;
 	}
 
-	void *user_area = find_chunk(arena, size, chunk_type, 0);
+	void *user_area = find_chunk(arena, size, chunk_type);
 	memcpy(user_area, chunk->user_area, __mchunk_size(chunk) - sizeof(t_chunk));
 	remove_chunk(bin, chunk, previous);
 	pthread_mutex_unlock(&arena->mutex);
@@ -345,13 +348,7 @@ void
 }
 
 void *
-malloc(size_t size) {
-
-	return jmalloc(size, 0);
-}
-
-void *
 calloc(size_t nmemb, size_t size) {
 
-	return jmalloc(nmemb * size, 1);
+	return malloc(nmemb * size);
 }

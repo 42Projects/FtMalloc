@@ -1,55 +1,6 @@
 #include "malloc.h"
 #include "arenap.h"
 
-#define BUFF_SIZE 4096
-static void
-flush_buffer (char *buffer, size_t *offset) {
-
-	buffer[*offset] = '\0';
-	(void)(write(1, buffer, *offset) + 1);
-	*offset = 0;
-}
-
-static void
-buff_string (const char *s, char *buffer, size_t *offset) {
-
-	while (*s) {
-		buffer[(*offset)++] = *s++;
-
-		if (*offset == BUFF_SIZE - 1) flush_buffer(buffer, offset);
-	}
-	flush_buffer(buffer, offset);
-}
-
-static void
-buff_number (int base, unsigned long number, char *buffer, size_t *offset) {
-
-	const char dec[10] = "0123456789";
-	const char hexa[16] = "0123456789abcdef";
-	char rev_buff[16];
-
-	if (number == 0) buffer[(*offset)++] = '0';
-	if (base == 19 && number < 16) buffer[(*offset)++] = '0';
-
-	int k = 0;
-	while (number != 0) {
-		rev_buff[k++] = (base == 10) ? dec[number % 10] : hexa[number % 16];
-		number /= (base == 10) ? 10 : 16;
-	}
-
-	if (*offset >= BUFF_SIZE - 19) flush_buffer(buffer, offset);
-
-	if (base == 18) {
-		buffer[(*offset)++] = '0';
-		buffer[(*offset)++] = 'x';
-	}
-
-	while (--k >= 0) buffer[(*offset)++] = rev_buff[k];
-
-	if (base == 19) buffer[(*offset)++] = ' ';
-
-	flush_buffer(buffer, offset);
-}
 
 static int
 test_chunk (t_bin *bin, t_chunk *chunk, t_chunk **previous) {
@@ -134,14 +85,15 @@ remove_chunk (t_bin *bin, t_chunk *chunk, t_chunk *previous) {
 
 		chunk->size &= ~(1UL << CHUNK_USED);
 
-		/* Defragment memory. */
+		/* If next chunk is free, defragment. */
 		t_chunk *next_chunk = __mchunk_next(chunk);
 		if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)) chunk->size += next_chunk->size;
 
+		/* If previous chunk is free, defragment.
 		if (previous != NULL && __mchunk_not_used(previous)) {
 			previous->size += chunk->size;
 			chunk = previous;
-		}
+		}*/
 
 		if (chunk->size > bin->max_chunk_size) {
 			bin->max_chunk_size = chunk->size;
@@ -149,7 +101,7 @@ remove_chunk (t_bin *bin, t_chunk *chunk, t_chunk *previous) {
 		}
 	}
 
-	/* Clear user area from garbage data. */
+	/* Clear user area of garbage data. */
 	memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
 }
 
