@@ -14,6 +14,7 @@ buff_string (const char *s, char *buffer, size_t *offset) {
 
 	while (*s) {
 		buffer[(*offset)++] = *s++;
+
 		if (*offset == BUFF_SIZE - 1) flush_buffer(buffer, offset);
 	}
 	flush_buffer(buffer, offset);
@@ -27,7 +28,6 @@ buff_number (int base, unsigned long number, char *buffer, size_t *offset) {
 	char rev_buff[16];
 
 	if (number == 0) buffer[(*offset)++] = '0';
-
 	if (base == 19 && number < 16) buffer[(*offset)++] = '0';
 
 	int k = 0;
@@ -48,24 +48,23 @@ buff_number (int base, unsigned long number, char *buffer, size_t *offset) {
 	if (base == 19) buffer[(*offset)++] = ' ';
 
 	flush_buffer(buffer, offset);
-
 }
 
 static void
 hexdump_chunk (t_chunk *chunk, char *buffer, size_t *offset) {
 
 	void *end = __mchunk_next(chunk);
-	unsigned char *ptr = (unsigned char *)chunk;
+	t_chunk *ptr = chunk;
 
 	while ((unsigned long)ptr != (unsigned long)end) {
 
-		if ((t_chunk *)ptr == chunk) buff_string("\x1b[1;31m", buffer, offset);
+		if (ptr == chunk) buff_string("\x1b[1;31m", buffer, offset);
 
 		buff_number(16, (unsigned long)ptr, buffer, offset);
 		buff_string("  ", buffer, offset);
 
 		for (int k = 0; k < 16; k++) {
-			buff_number(19, (unsigned long)ptr[k], buffer, offset);
+			buff_number(19, (unsigned long)(((unsigned char *)ptr)[k]), buffer, offset);
 
 			if (k == 7) buffer[(*offset)++] = ' ';
 		}
@@ -73,14 +72,15 @@ hexdump_chunk (t_chunk *chunk, char *buffer, size_t *offset) {
 		buff_string(" |", buffer, offset);
 
 		for (int k = 0; k < 16; k++) {
-			buffer[(*offset)++] = (ptr[k] > 31 && ptr[k] < 127) ? ptr[k] : ' ';
+			char c = ((char *)ptr)[k];
+			buffer[(*offset)++] = (c > 31 && c < 127) ? c : ' ';
 		}
 
 		buff_string("|\n", buffer, offset);
 
-		if ((t_chunk *)ptr == chunk) buff_string("\x1b[0m", buffer, offset);
+		if (ptr == chunk) buff_string("\x1b[0m", buffer, offset);
 
-		ptr += 16;
+		++ptr;
 	}
 }
 
@@ -105,22 +105,26 @@ explore_bin (t_bin *bin, int chunk_type, char *buffer, size_t *offset, size_t *a
 			if (__mchunk_is_used(chunk) || g_arena_data->env & M_SHOW_UNALLOCATED) {
 				size_t chunk_size = __mchunk_size(chunk) - sizeof(t_chunk);
 
-				if (g_arena_data->env & M_SHOW_HEXDUMP) buff_string("\x1b[4m", buffer, offset);
+				if ((__mchunk_not_used(chunk) && g_arena_data->env & M_SHOW_UNALLOCATED)
+					|| (g_arena_data->env & M_SHOW_HEXDUMP) == 0) {
+					buff_number(18, (unsigned long) chunk->user_area, buffer, offset);
+					buff_string(" - ", buffer, offset);
+					buff_number(18, (unsigned long) __mchunk_next(chunk), buffer, offset);
+					buff_string(" : ", buffer, offset);
+					buff_number(10, chunk_size, buffer, offset);
+					buff_string(" bytes", buffer, offset);
 
-				buff_number(18, (unsigned long)chunk->user_area, buffer, offset);
-				buff_string(" - ", buffer, offset);
-				buff_number(18, (unsigned long)__mchunk_next(chunk), buffer, offset);
-				buff_string(" : ", buffer, offset);
-				buff_number(10, chunk_size, buffer, offset);
-				buff_string(" bytes", buffer, offset);
+					if (__mchunk_not_used(chunk)) buff_string(" \x1b[92m(UNALLOCATED)\x1b[0m", buffer, offset);
 
-				if (g_arena_data->env & M_SHOW_HEXDUMP) buff_string("\x1b[0m", buffer, offset);
-				if (__mchunk_not_used(chunk)) buff_string(" \x1b[92m(UNALLOCATED)\x1b[0m", buffer, offset);
+					buffer[(*offset)++] = '\n';
+				}
 
-				buffer[(*offset)++] = '\n';
+				if (__mchunk_is_used(chunk)) {
 
-				if (g_arena_data->env & M_SHOW_HEXDUMP) hexdump_chunk(chunk, buffer, offset);
-				if (__mchunk_is_used(chunk)) *arena_total += chunk_size;
+					if (g_arena_data->env & M_SHOW_HEXDUMP) hexdump_chunk(chunk, buffer, offset);
+
+					*arena_total += chunk_size;
+				}
 			}
 			chunk = __mchunk_next(chunk);
 		}
