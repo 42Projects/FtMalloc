@@ -200,7 +200,7 @@ jmalloc (size_t size, int zero_set) {
 		/* Get environment variables. */
 		char *val = NULL;
 		if ((val = getenv("M_ABORT_ON_ERROR")) != NULL && val[0] == '1') g_arena_data->env |= M_ABORT_ON_ERROR;
-		if ((val = getenv("M_RELEASE")) != NULL && val[0] == '1') g_arena_data->env |= M_RELEASE;
+		if ((val = getenv("M_RELEASE_BIN")) != NULL && val[0] == '1') g_arena_data->env |= M_RELEASE_BIN;
 		if ((val = getenv("M_SHOW_HEXDUMP")) != NULL && val[0] == '1') g_arena_data->env |= M_SHOW_HEXDUMP;
 		if ((val = getenv("M_SHOW_UNALLOCATED")) != NULL && val[0] == '1') g_arena_data->env |= M_SHOW_UNALLOCATED;
 
@@ -292,14 +292,14 @@ void
 		if (size == 0 || size >= (1UL << SIZE_THRESHOLD)) return NULL;
 	}
 
-	t_chunk *chunk = (t_chunk *)ptr - 1;
-	if (__builtin_expect(test_valid_chunk(chunk) != 0, 0)) {
+	t_chunk *chunk = (t_chunk *)ptr - 1, *previous = NULL;
+	if (__builtin_expect(test_valid_chunk(chunk, &previous) != 0, 0)) {
 		if (g_arena_data->env & M_ABORT_ON_ERROR) {
 			(void)(write(STDERR_FILENO, "realloc(): invalid pointer\n", 27) << 1);
 			abort();
 		}
 
-		return ptr;
+		return NULL;
 	}
 
 	if (__mchunk_size(chunk) - sizeof(t_chunk) >= size) return ptr;
@@ -339,7 +339,7 @@ void
 
 	void *user_area = find_chunk(arena, size, chunk_type, 0);
 	memcpy(user_area, chunk->user_area, __mchunk_size(chunk) - sizeof(t_chunk));
-	remove_chunk(bin, chunk);
+	remove_chunk(bin, chunk, previous);
 	pthread_mutex_unlock(&arena->mutex);
 	return user_area;
 }

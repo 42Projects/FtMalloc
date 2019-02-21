@@ -14,7 +14,7 @@
 
 # define M_ARENA_MAX 8
 # define CHUNKS_PER_POOL 100
-# define SIZE_TINY 256
+# define SIZE_TINY 1024
 # define SIZE_SMALL 4096
 # define SIZE_THRESHOLD 59
 # define SIZE_MASK ((1UL << (SIZE_THRESHOLD + 1)) - 1)
@@ -28,9 +28,9 @@ enum				e_type {
 
 enum 				e_env {
 	M_ABORT_ON_ERROR = 1,
-	M_RELEASE = 2,
+	M_RELEASE_BIN = 2,
 	M_SHOW_HEXDUMP = 4,
-	M_SHOW_UNALLOCATED = 8,
+	M_SHOW_UNALLOCATED = 8
 };
 
 # define __marena_update_max_chunks(bin, old_size)													\
@@ -78,14 +78,14 @@ typedef struct		s_arena {
 
 typedef struct 		s_arena_data {
 	_Atomic int 	arena_count;
+	t_arena			arenas[M_ARENA_MAX];
 	int 			env;
 	unsigned long 	pagesize;
-	t_arena			arenas[M_ARENA_MAX];
 }					t_arena_data;
 
 extern t_arena_data	*g_arena_data;
 
-void				remove_chunk(t_bin *bin, t_chunk *chunk);
-int 				test_valid_chunk(t_chunk *chunk);
+void				remove_chunk(t_bin *bin, t_chunk *chunk, t_chunk *previous);
+int 				test_valid_chunk(t_chunk *chunk, t_chunk **previous);
 
 #endif /* __ARENA_PRIVATE_H */

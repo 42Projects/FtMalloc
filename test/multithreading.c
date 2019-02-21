@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <memory.h>
 
-#define NUM_THREAD 8
+#define NUM_THREAD 2
 #define FIRST_MALLOC_SIZE 40000
 #define SECOND_MALLOC_SIZE 34
 #define NUM(x) (x)
@@ -79,6 +79,7 @@ static void
 
 	b = REALLOC(b, NUM(REALLOC_SIZE));
 	FREE(b);
+
 	FREE(ptr6);
 	FREE(ptr5);
 	ptr7 = MALLOC(NUM(1096));
