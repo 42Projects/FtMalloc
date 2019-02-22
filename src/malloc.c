@@ -285,8 +285,8 @@ malloc (size_t size) {
 	return user_area;
 }
 
-void
-*realloc(void *ptr, size_t size) {
+void *
+realloc (void *ptr, size_t size) {
 
 	if (ptr == NULL) {
 		return malloc(size);
@@ -306,7 +306,6 @@ void
 	}
 
 	if (__mchunk_size(chunk) - sizeof(t_chunk) >= size) return ptr;
-
 
 	unsigned long req_size = ((size + 0xfUL) & ~0xfUL) + sizeof(t_chunk);
 	t_bin *bin = chunk->bin;
@@ -348,7 +347,7 @@ void
 }
 
 void *
-calloc(size_t nmemb, size_t size) {
+calloc (size_t nmemb, size_t size) {
 
 	return malloc(nmemb * size);
 }

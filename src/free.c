@@ -61,6 +61,7 @@ test_valid_chunk (t_chunk *chunk, t_chunk **previous) {
 			pthread_mutex_unlock(&arena->mutex);
 			return (ret == 2) ? 1 : 0;
 		}
+
 		pthread_mutex_unlock(&arena->mutex);
 	}
 
@@ -82,7 +83,6 @@ remove_chunk (t_bin *bin, t_chunk *chunk, t_chunk *previous) {
 		if  (__mbin_type_not(bin, CHUNK_LARGE)) __marena_update_max_chunks(bin, 0);
 
 	} else {
-
 		chunk->size &= ~(1UL << CHUNK_USED);
 
 		/* If next chunk is free, defragment. */
@@ -106,7 +106,7 @@ remove_chunk (t_bin *bin, t_chunk *chunk, t_chunk *previous) {
 }
 
 void
-free(void *ptr) {
+free (void *ptr) {
 
 	if (ptr == NULL) return;
 
