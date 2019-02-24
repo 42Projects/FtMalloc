@@ -59,9 +59,9 @@ enum 				e_env {
 
 typedef struct		s_chunk {
 	unsigned long	size;
-	struct s_bin	*bin;
+	struct s_chunk	*prev;
 	void			*user_area[];
-}					t_chunk;
+}					__attribute__((packed)) t_chunk;
 
 typedef struct 		s_bin {
 	unsigned long	free_size;
@@ -71,7 +71,7 @@ typedef struct 		s_bin {
 	struct s_bin	*next;
 	struct s_bin	*prev;
 	t_chunk			chunk[];
-}					t_bin;
+}					__attribute__((packed)) t_bin;
 
 typedef struct		s_arena {
 	pthread_mutex_t	mutex;
@@ -91,7 +91,7 @@ typedef struct 		s_arena_data {
 
 extern t_arena_data	*g_arena_data;
 
-void				remove_chunk(t_bin *bin, t_chunk *chunk, t_chunk *previous);
-int 				test_valid_chunk(t_chunk *chunk, t_chunk **previous);
+void				remove_chunk(t_bin *bin, t_chunk *chunk);
+int 				test_valid_chunk(t_chunk *chunk, t_bin **bin);
 
 #endif /* __ARENA_PRIVATE_H */

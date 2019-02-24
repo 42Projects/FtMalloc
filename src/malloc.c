@@ -80,12 +80,11 @@ create_user_area (t_bin *bin, t_chunk *chunk, size_t size, int zero_set) {
 
 	unsigned long old_size = __mchunk_size(chunk);
 	chunk->size = size | (1UL << CHUNK_USED);
-	chunk->bin = bin;
 	t_chunk *next_chunk = __mchunk_next(chunk);
 
 	if (next_chunk != __mbin_end(bin) && old_size != size) {
 		next_chunk->size = old_size - size;
-		next_chunk->bin = bin;
+		next_chunk->prev = chunk;
 	}
 
 	if (old_size == bin->max_chunk_size) update_max_chunk(bin, next_chunk, old_size);
@@ -285,8 +284,9 @@ realloc (void *ptr, size_t size) {
 		if (size == 0 || size >= (1UL << SIZE_THRESHOLD)) return NULL;
 	}
 
-	t_chunk *chunk = (t_chunk *)ptr - 1, *previous = NULL;
-	if (__builtin_expect(test_valid_chunk(chunk, &previous) != 0, 0)) {
+	t_chunk *chunk = (t_chunk *)ptr - 1;
+	t_bin *bin = NULL;
+	if (__builtin_expect(test_valid_chunk(chunk, &bin) != 0, 0)) {
 		if (g_arena_data->env & M_ABORT_ON_ERROR) {
 			(void)(write(STDERR_FILENO, "realloc(): invalid pointer\n", 27) << 1);
 			abort();
@@ -298,7 +298,6 @@ realloc (void *ptr, size_t size) {
 	if (__mchunk_size(chunk) - sizeof(t_chunk) >= size) return ptr;
 
 	unsigned long req_size = ((size + 0xfUL) & ~0xfUL) + sizeof(t_chunk);
-	t_bin *bin = chunk->bin;
 	t_arena *arena = bin->arena;
 	pthread_mutex_lock(&arena->mutex);
 	t_chunk *next_chunk = __mchunk_next(chunk);
@@ -310,10 +309,13 @@ realloc (void *ptr, size_t size) {
 		unsigned long realloc_size = __mchunk_size(chunk) + old_size;
 		bin->free_size -= req_size - __mchunk_size(chunk);
 		chunk->size = req_size | (1UL << CHUNK_USED);
-		memset(next_chunk, 0, sizeof(t_chunk));
-		next_chunk = __mchunk_next(chunk);
 
-		if (next_chunk != __mbin_end(bin) && req_size != realloc_size) next_chunk->size = realloc_size - req_size;
+		next_chunk = __mchunk_next(chunk);
+		if (next_chunk != __mbin_end(bin) && req_size != realloc_size) {
+			next_chunk->size = realloc_size - req_size;
+			next_chunk->prev = chunk;
+		}
+
 		if (old_size == bin->max_chunk_size) update_max_chunk(bin, next_chunk, old_size);
 
 		pthread_mutex_unlock(&arena->mutex);
@@ -325,7 +327,7 @@ realloc (void *ptr, size_t size) {
 	int chunk_type = (size > SIZE_SMALL) ? CHUNK_LARGE : (size <= SIZE_TINY) ? CHUNK_TINY : CHUNK_SMALL;
 	void *user_area = find_chunk(arena, size, chunk_type, 0);
 	memcpy(user_area, chunk->user_area, __mchunk_size(chunk) - sizeof(t_chunk));
-	remove_chunk(bin, chunk, previous);
+	remove_chunk(bin, chunk);
 	pthread_mutex_unlock(&arena->mutex);
 	return user_area;
 }
