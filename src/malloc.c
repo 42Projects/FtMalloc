@@ -66,7 +66,7 @@ create_new_bin (t_arena *arena, unsigned long size, int chunk_type, pthread_mute
 }
 
 static void *
-create_user_area (t_bin *bin, t_chunk *chunk, size_t size) {
+create_user_area (t_bin *bin, t_chunk *chunk, size_t size, int zero_set) {
 
 	/*
 	   Populate chunk headers.
@@ -74,8 +74,6 @@ create_user_area (t_bin *bin, t_chunk *chunk, size_t size) {
 	   chunks which are not part of any linked list, and defragment the memory in free and realloc calls) and the pool
 	   header address. We also use the size to store CHUNK_USED to know if the chunk is used or not.
 	*/
-
-//	printf("REQUEST CHUNK OF SIZE %lu IN BIN %p, BIN FREE SIZE = %lu\n", size + 16, bin, bin->free_size);
 
 	size += sizeof(t_chunk);
 	bin->free_size -= size;
@@ -91,12 +89,13 @@ create_user_area (t_bin *bin, t_chunk *chunk, size_t size) {
 	}
 
 	if (old_size == bin->max_chunk_size) update_max_chunk(bin, next_chunk, old_size);
+	if (zero_set) memset(chunk->user_area, 0, size - sizeof(t_chunk));
 
 	return chunk->user_area;
 }
 
 static void *
-find_chunk (t_arena *arena, unsigned long size, int chunk_type) {
+find_chunk (t_arena *arena, unsigned long size, int chunk_type, int zero_set) {
 
 	t_bin *bin = (chunk_type == CHUNK_LARGE) ? arena->large : NULL;
 	unsigned long required_size = size + sizeof(t_chunk);
@@ -142,7 +141,7 @@ find_chunk (t_arena *arena, unsigned long size, int chunk_type) {
 			arena->large = bin;
 		}
 
-		return create_user_area(bin, bin->chunk, size);
+		return create_user_area(bin, bin->chunk, size, zero_set);
 	}
 
 	/*
@@ -157,11 +156,11 @@ find_chunk (t_arena *arena, unsigned long size, int chunk_type) {
 		chunk = __mchunk_next(chunk);
 	}
 
-	return create_user_area(bin, chunk, size);
+	return create_user_area(bin, chunk, size, zero_set);
 }
 
-void *
-__malloc (size_t size) {
+static void *
+__malloc (size_t size, int zero_set) {
 
 	static pthread_mutex_t	main_arena_mutex = PTHREAD_MUTEX_INITIALIZER,
 							new_arena_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -210,7 +209,7 @@ __malloc (size_t size) {
 		pthread_mutex_lock(&arena_data.arenas[0].mutex);
 		pthread_mutex_unlock(&main_arena_mutex);
 
-		void *user_area = create_user_area(bin, bin->chunk, size);
+		void *user_area = create_user_area(bin, bin->chunk, size, zero_set);
 		pthread_mutex_unlock(&arena_data.arenas[0].mutex);
 		return user_area;
 	}
@@ -261,7 +260,7 @@ __malloc (size_t size) {
 		++arena_data.arena_count;
 		pthread_mutex_unlock(&new_arena_mutex);
 
-		void *user_area = create_user_area(bin, bin->chunk, size);
+		void *user_area = create_user_area(bin, bin->chunk, size, zero_set);
 		pthread_mutex_unlock(&arena->mutex);
 		return user_area;
 	}
@@ -271,13 +270,13 @@ __malloc (size_t size) {
 	   enough to accommodate the user-requested size.
 	*/
 
-	void *user_area = find_chunk(arena, size, chunk_type);
+	void *user_area = find_chunk(arena, size, chunk_type, zero_set);
 	pthread_mutex_unlock(&arena->mutex);
 	return user_area;
 }
 
 void *
-__realloc (void *ptr, size_t size) {
+realloc (void *ptr, size_t size) {
 
 	if (ptr == NULL) {
 		return malloc(size);
@@ -307,16 +306,14 @@ __realloc (void *ptr, size_t size) {
 	/* If next chunk is available and the cumulative size is enough, extend the current chunk. */
 	if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)
 		&& __mchunk_size(chunk) + __mchunk_size(next_chunk) >= req_size) {
-
-		bin->free_size += __mchunk_size(chunk);
-		unsigned long realloc_size = __mchunk_size(chunk) + __mchunk_size(next_chunk);
 		unsigned long old_size = __mchunk_size(next_chunk);
+		unsigned long realloc_size = __mchunk_size(chunk) + old_size;
+		bin->free_size -= req_size - __mchunk_size(chunk);
 		chunk->size = req_size | (1UL << CHUNK_USED);
-		bin->free_size -= __mchunk_size(chunk);
 		memset(next_chunk, 0, sizeof(t_chunk));
 		next_chunk = __mchunk_next(chunk);
 
-		if (next_chunk != __mbin_end(bin) && next_chunk->size == 0) next_chunk->size = realloc_size - req_size;
+		if (next_chunk != __mbin_end(bin) && req_size != realloc_size) next_chunk->size = realloc_size - req_size;
 		if (old_size == bin->max_chunk_size) update_max_chunk(bin, next_chunk, old_size);
 
 		pthread_mutex_unlock(&arena->mutex);
@@ -326,7 +323,7 @@ __realloc (void *ptr, size_t size) {
 	/* Otherwise, we have to find a new chunk, copy the content to it and free the current chunk. */
 	size = req_size - sizeof(t_chunk);
 	int chunk_type = (size > SIZE_SMALL) ? CHUNK_LARGE : (size <= SIZE_TINY) ? CHUNK_TINY : CHUNK_SMALL;
-	void *user_area = find_chunk(arena, size, chunk_type);
+	void *user_area = find_chunk(arena, size, chunk_type, 0);
 	memcpy(user_area, chunk->user_area, __mchunk_size(chunk) - sizeof(t_chunk));
 	remove_chunk(bin, chunk, previous);
 	pthread_mutex_unlock(&arena->mutex);
@@ -334,7 +331,13 @@ __realloc (void *ptr, size_t size) {
 }
 
 void *
-__calloc (size_t nmemb, size_t size) {
+malloc (size_t size) {
 
-	return __malloc(nmemb * size);
+	return __malloc(size, 0);
+}
+
+void *
+calloc (size_t nmemb, size_t size) {
+
+	return __malloc(nmemb * size, 1);
 }

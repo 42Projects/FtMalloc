@@ -98,8 +98,8 @@ remove_chunk (t_bin *bin, t_chunk *chunk, t_chunk *previous) {
 		chunk->size &= ~(1UL << CHUNK_USED);
 
 		/* If next chunk is free, defragment. */
-		t_chunk *next_chunk = __mchunk_next(chunk);
-		if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)) chunk->size += next_chunk->size;
+//		t_chunk *next_chunk = __mchunk_next(chunk);
+//		if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)) chunk->size += next_chunk->size;
 
 		/* If previous chunk is free, defragment. */
 		if (previous != NULL && __mchunk_not_used(previous)) {
@@ -112,13 +112,10 @@ remove_chunk (t_bin *bin, t_chunk *chunk, t_chunk *previous) {
 			__marena_update_max_chunks(bin, 0);
 		}
 	}
-
-	/* Clear user area of garbage data. */
-	memset(chunk->user_area, 0, chunk->size - sizeof(t_chunk));
 }
 
 void
-__free (void *ptr) {
+free (void *ptr) {
 
 	if (ptr == NULL) return;
 

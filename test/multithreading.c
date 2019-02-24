@@ -4,13 +4,13 @@
 #include <stdio.h>
 #include <memory.h>
 
-#define NUM_THREAD 300
+#define NUM_THREAD 160
 #define FIRST_MALLOC_SIZE 40000
 #define SECOND_MALLOC_SIZE 34
 #define NUM(x) (x)
-#define MALLOC(x) (__malloc(x))
-#define FREE(x) (__free(x))
-#define REALLOC(x, y) (__realloc(x, y))
+#define MALLOC(x) (malloc(x))
+#define FREE(x) (free(x))
+#define REALLOC(x, y) (realloc(x, y))
 #define REALLOC_SIZE 5000
 
 
