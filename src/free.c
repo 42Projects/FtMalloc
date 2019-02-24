@@ -19,7 +19,7 @@ test_chunk (t_bin *bin, t_chunk *chunk, t_chunk **previous) {
 }
 
 static int
-test_bin (t_bin *bin, t_chunk *chunk, int chunk_type, t_chunk **previous) {
+test_bin (t_bin *bin, t_chunk *chunk, t_chunk **previous) {
 
 	while (bin != NULL) {
 		if ((size_t)chunk > (size_t)bin && (size_t)chunk < (size_t)__mbin_end(bin)) {
@@ -28,7 +28,7 @@ test_bin (t_bin *bin, t_chunk *chunk, int chunk_type, t_chunk **previous) {
 
 			return test_chunk(bin, chunk, previous);
 		}
-		bin = (chunk_type == CHUNK_TINY) ? bin->left : bin->right;
+		bin = bin->next;
 	}
 
 	return 1;
@@ -44,19 +44,19 @@ test_valid_chunk (t_chunk *chunk, t_chunk **previous) {
 		t_arena *arena = &g_arena_data->arenas[k];
 		pthread_mutex_lock(&arena->mutex);
 
-		int ret = test_bin(arena->small_bins, chunk, CHUNK_TINY, previous);
+		int ret = test_bin(arena->tiny, chunk, previous);
 		if (ret != 1) {
 			pthread_mutex_unlock(&arena->mutex);
 			return (ret == 2) ? 1 : 0;
 		}
 
-		ret = test_bin(arena->small_bins, chunk, CHUNK_SMALL, previous);
+		ret = test_bin(arena->small, chunk, previous);
 		if (ret != 1) {
 			pthread_mutex_unlock(&arena->mutex);
 			return (ret == 2) ? 1 : 0;
 		}
 
-		ret = test_bin(arena->large_bins, chunk, CHUNK_LARGE, previous);
+		ret = test_bin(arena->large, chunk, previous);
 		if (ret != 1) {
 			pthread_mutex_unlock(&arena->mutex);
 			return (ret == 2) ? 1 : 0;
@@ -76,11 +76,23 @@ remove_chunk (t_bin *bin, t_chunk *chunk, t_chunk *previous) {
 
 	/* If the bin is empty, clean it */
 	if (bin->free_size + sizeof(t_bin) == __mbin_size(bin)) {
-		chunk = bin->chunk;
-		chunk->size = bin->free_size;
-		bin->max_chunk_size = chunk->size;
 
-		if  (__mbin_type_not(bin, CHUNK_LARGE)) __marena_update_max_chunks(bin, 0);
+		t_bin *main_bin = __mbin_get_main(bin->arena, __mbin_get_chunk_type(bin));
+		if ((g_arena_data->env & M_RELEASE_BIN) != 0 && main_bin != bin) {
+
+			bin->prev->next = bin->next;
+			if (bin->next != NULL) bin->next->prev = bin->prev;
+
+			munmap(bin, __mbin_size(bin));
+			return;
+
+		} else {
+			chunk = bin->chunk;
+			chunk->size = bin->free_size;
+			bin->max_chunk_size = chunk->size;
+
+			if (__mbin_type_not(bin, CHUNK_LARGE)) __marena_update_max_chunks(bin, 0);
+		}
 
 	} else {
 		chunk->size &= ~(1UL << CHUNK_USED);
@@ -89,11 +101,11 @@ remove_chunk (t_bin *bin, t_chunk *chunk, t_chunk *previous) {
 		t_chunk *next_chunk = __mchunk_next(chunk);
 		if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)) chunk->size += next_chunk->size;
 
-		/* If previous chunk is free, defragment.
+		/* If previous chunk is free, defragment. */
 		if (previous != NULL && __mchunk_not_used(previous)) {
-			previous->size += chunk->size;
-			chunk = previous;
-		}*/
+//			previous->size += chunk->size;
+//			chunk = previous;
+		}
 
 		if (chunk->size > bin->max_chunk_size) {
 			bin->max_chunk_size = chunk->size;

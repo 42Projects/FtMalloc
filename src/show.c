@@ -85,8 +85,9 @@ hexdump_chunk (t_chunk *chunk, char *buffer, size_t *offset) {
 }
 
 static void
-explore_bin (t_bin *bin, int chunk_type, char *buffer, size_t *offset, size_t *arena_total) {
+explore_bin (t_arena *arena, int chunk_type, char *buffer, size_t *offset, size_t *arena_total) {
 
+	t_bin *bin = __mbin_get_main(arena, chunk_type);
 	while (bin != NULL) {
 
 		if (chunk_type == CHUNK_LARGE) {
@@ -128,7 +129,7 @@ explore_bin (t_bin *bin, int chunk_type, char *buffer, size_t *offset, size_t *a
 			}
 			chunk = __mchunk_next(chunk);
 		}
-		bin = (chunk_type == CHUNK_TINY) ? bin->left : bin->right;
+		bin = bin->next;
 	}
 }
 
@@ -153,16 +154,9 @@ show_alloc_mem (void) {
 		buff_number(10, k + 1, buffer, &offset);
 		buff_string(")\x1b[0m\n", buffer, &offset);
 
-		t_bin *bin = arena->small_bins;
-		if (bin != NULL && __mbin_type_is(bin, CHUNK_SMALL)) bin = bin->left;
-		explore_bin(bin, CHUNK_TINY, buffer, &offset, &arena_total);
-
-		bin = arena->small_bins;
-		if (bin != NULL && __mbin_type_is(bin, CHUNK_TINY)) bin = bin->right;
-		explore_bin(bin, CHUNK_SMALL, buffer, &offset, &arena_total);
-
-		bin = arena->large_bins;
-		explore_bin(bin, CHUNK_LARGE, buffer, &offset, &arena_total);
+		explore_bin(arena, CHUNK_TINY, buffer, &offset, &arena_total);
+		explore_bin(arena, CHUNK_SMALL, buffer, &offset, &arena_total);
+		explore_bin(arena, CHUNK_LARGE, buffer, &offset, &arena_total);
 
 		buff_string("\x1b[33mTotal (arena): \x1b[0m", buffer, &offset);
 		buff_number(10, arena_total, buffer, &offset);

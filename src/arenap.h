@@ -44,13 +44,17 @@ enum 				e_env {
 	}																								\
 })
 # define __mbin_end(bin) ((void *)((unsigned long)bin + __mbin_size(bin)))
+# define __mbin_get_chunk_type(bin) \
+	((__mbin_type_is(bin, CHUNK_TINY)) ? CHUNK_TINY : (__mbin_type_is(bin, CHUNK_SMALL)) ? CHUNK_SMALL : CHUNK_LARGE)
+# define __mbin_get_main(arena, chunk_type) \
+	((chunk_type == CHUNK_TINY) ? arena->tiny : (chunk_type == CHUNK_SMALL) ? arena->small : arena->large)
 # define __mbin_size(bin) (bin->size & SIZE_MASK)
+# define __mbin_type_is(bin, chunk_type) (bin->size & (1UL << chunk_type))
+# define __mbin_type_not(bin, chunk_type) (__mbin_type_is(bin, chunk_type) == 0)
 # define __mchunk_is_used(chunk) (chunk->size & (1UL << CHUNK_USED))
 # define __mchunk_next(chunk) ((t_chunk *)((unsigned long)chunk + __mchunk_size(chunk)))
 # define __mchunk_not_used(chunk) (__mchunk_is_used(chunk) == 0)
 # define __mchunk_size(chunk) (chunk->size & SIZE_MASK)
-# define __mbin_type_is(bin, chunk_type) (bin->size & (1UL << chunk_type))
-# define __mbin_type_not(bin, chunk_type) (__mbin_type_is(bin, chunk_type) == 0)
 
 typedef struct		s_chunk {
 	unsigned long	size;
@@ -63,15 +67,16 @@ typedef struct 		s_bin {
 	unsigned long	size;
 	unsigned long	max_chunk_size;
 	struct s_arena	*arena;
-	struct s_bin	*left;
-	struct s_bin	*right;
+	struct s_bin	*next;
+	struct s_bin	*prev;
 	t_chunk			chunk[];
 }					t_bin;
 
 typedef struct		s_arena {
 	pthread_mutex_t	mutex;
-	t_bin			*small_bins;
-	t_bin			*large_bins;
+	t_bin			*tiny;
+	t_bin			*small;
+	t_bin			*large;
 	unsigned long	max_chunk_tiny;
 	unsigned long	max_chunk_small;
 }					t_arena;

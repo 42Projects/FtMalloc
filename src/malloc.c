@@ -96,22 +96,16 @@ create_user_area (t_bin *bin, t_chunk *chunk, size_t size) {
 static void *
 find_chunk (t_arena *arena, unsigned long size, int chunk_type) {
 
-	t_bin *bin = (chunk_type == CHUNK_LARGE) ? arena->large_bins : NULL;
+	t_bin *bin = (chunk_type == CHUNK_LARGE) ? arena->large : NULL;
 	unsigned long required_size = size + sizeof(t_chunk);
 
 	/* Look for a bin with a matching chunk type and enough space to accommodate user request. */
 	if ((chunk_type == CHUNK_TINY && arena->max_chunk_tiny >= required_size)
 		|| (chunk_type == CHUNK_SMALL && arena->max_chunk_small >= required_size)) {
 
-		bin = arena->small_bins;
-		if (bin != NULL && chunk_type == CHUNK_TINY && __mbin_type_is(bin, CHUNK_SMALL)) {
-			bin = bin->left;
-		} else if (bin != NULL && chunk_type == CHUNK_SMALL && __mbin_type_is(bin, CHUNK_TINY)) {
-			bin = bin->right;
-		}
-
+		bin = __mbin_get_main(arena, chunk_type);
 		while (bin != NULL && bin->max_chunk_size < required_size) {
-			bin = (chunk_type == CHUNK_TINY) ? bin->left : bin->right;
+			bin = bin->next;
 		}
 	}
 
@@ -127,31 +121,23 @@ find_chunk (t_arena *arena, unsigned long size, int chunk_type) {
 		   Tiny chunks bins will be placed to the left of the main bin, and small chunks bins to it's right.
 		*/
 
-		t_bin *main_bin = (chunk_type == CHUNK_LARGE) ? arena->large_bins : arena->small_bins;
+		t_bin *main_bin = __mbin_get_main(arena, chunk_type);
 		if (main_bin != NULL) {
-			t_bin *tmp = (chunk_type == CHUNK_TINY) ? main_bin->left : main_bin->right;
+			t_bin *tmp = main_bin->next;
 
 			/* Insert the new bin into the bin list. */
-			if (chunk_type == CHUNK_TINY) {
-				main_bin->left = bin;
-				bin->left = tmp;
-				bin->right = main_bin;
+			main_bin->next = bin;
+			bin->next = tmp;
+			bin->prev = main_bin;
 
-				if (tmp != NULL) tmp->right = bin;
+			if (tmp != NULL) tmp->prev = bin;
 
-			} else {
-				main_bin->right = bin;
-				bin->right = tmp;
-				bin->left = main_bin;
-
-				if (tmp != NULL) tmp->left = bin;
-
-			}
-
-		} else if (chunk_type == CHUNK_LARGE) {
-			arena->large_bins = bin;
+		} else if (chunk_type == CHUNK_TINY) {
+			arena->tiny = bin;
+		} else if (chunk_type == CHUNK_SMALL) {
+			arena->small = bin;
 		} else {
-			arena->small_bins = bin;
+			arena->large = bin;
 		}
 
 		return create_user_area(bin, bin->chunk, size);
@@ -211,8 +197,9 @@ malloc (size_t size) {
 		if (bin == MAP_FAILED) return NULL;
 
 		arena_data.arenas[0] = (t_arena) {
-			.small_bins = (chunk_type != CHUNK_LARGE) ? bin : NULL,
-			.large_bins = (chunk_type == CHUNK_LARGE) ? bin : NULL,
+			.tiny = (chunk_type == CHUNK_TINY) ? bin : NULL,
+			.small = (chunk_type == CHUNK_SMALL) ? bin : NULL,
+			.large = (chunk_type == CHUNK_LARGE) ? bin : NULL,
 			.max_chunk_small = 0,
 			.max_chunk_tiny = 0
 		};
@@ -260,8 +247,9 @@ malloc (size_t size) {
 		if (bin == MAP_FAILED) return NULL;
 
 		arena_data.arenas[arena_data.arena_count] = (t_arena) {
-				.small_bins = (chunk_type != CHUNK_LARGE) ? bin : NULL,
-				.large_bins = (chunk_type == CHUNK_LARGE) ? bin : NULL,
+				.tiny = (chunk_type == CHUNK_TINY) ? bin : NULL,
+				.small = (chunk_type == CHUNK_SMALL) ? bin : NULL,
+				.large = (chunk_type == CHUNK_LARGE) ? bin : NULL,
 				.max_chunk_small = 0,
 				.max_chunk_tiny = 0
 		};
@@ -332,13 +320,7 @@ realloc (void *ptr, size_t size) {
 
 	/* Otherwise, we have to find a new chunk, copy the content to it and free the current chunk. */
 	size = req_size - sizeof(t_chunk);
-	int chunk_type;
-	if (size > SIZE_SMALL) {
-		chunk_type = CHUNK_LARGE;
-	} else {
-		chunk_type = (size <= SIZE_TINY) ? CHUNK_TINY : CHUNK_SMALL;
-	}
-
+	int chunk_type = (size > SIZE_SMALL) ? CHUNK_LARGE : (size <= SIZE_TINY) ? CHUNK_TINY : CHUNK_SMALL;
 	void *user_area = find_chunk(arena, size, chunk_type);
 	memcpy(user_area, chunk->user_area, __mchunk_size(chunk) - sizeof(t_chunk));
 	remove_chunk(bin, chunk, previous);
