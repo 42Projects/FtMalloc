@@ -30,7 +30,8 @@ enum 				e_env {
 	M_ABORT_ON_ERROR = 1,
 	M_RELEASE_BIN = 2,
 	M_SHOW_HEXDUMP = 4,
-	M_SHOW_UNALLOCATED = 8
+	M_SHOW_UNALLOCATED = 8,
+	M_SHOW_DEBUG = 16
 };
 
 # define __marena_update_max_chunks(bin, old_size)													\

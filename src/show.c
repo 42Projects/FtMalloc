@@ -99,7 +99,19 @@ explore_bin (t_arena *arena, int chunk_type, char *buffer, size_t *offset, size_
 		}
 
 		buff_number(18, (unsigned long)bin, buffer, offset);
-		buff_string("\x1b[0m\n", buffer, offset);
+		buff_string("\x1b[0m", buffer, offset);
+
+		if (g_arena_data->env & M_SHOW_DEBUG) {
+			buff_string(" [size = ", buffer, offset);
+			buff_number(10, __mbin_size(bin), buffer, offset);
+			buff_string("], [free size = ", buffer, offset);
+			buff_number(10, bin->free_size, buffer, offset);
+			buff_string("], [max chunk size = ", buffer, offset);
+			buff_number(10, bin->max_chunk_size, buffer, offset);
+			buffer[(*offset)++] = ']';
+		}
+
+		buffer[(*offset)++] = '\n';
 
 		t_chunk *chunk = bin->chunk;
 		while (chunk != __mbin_end(bin)) {
@@ -108,9 +120,9 @@ explore_bin (t_arena *arena, int chunk_type, char *buffer, size_t *offset, size_
 
 				if ((__mchunk_not_used(chunk) && g_arena_data->env & M_SHOW_UNALLOCATED)
 					|| (g_arena_data->env & M_SHOW_HEXDUMP) == 0) {
-					buff_number(18, (unsigned long) chunk->user_area, buffer, offset);
+					buff_number(18, (unsigned long)chunk->user_area, buffer, offset);
 					buff_string(" - ", buffer, offset);
-					buff_number(18, (unsigned long) __mchunk_next(chunk), buffer, offset);
+					buff_number(18, (unsigned long)__mchunk_next(chunk), buffer, offset);
 					buff_string(" : ", buffer, offset);
 					buff_number(10, chunk_size, buffer, offset);
 					buff_string(" bytes", buffer, offset);

@@ -75,6 +75,8 @@ create_user_area (t_bin *bin, t_chunk *chunk, size_t size) {
 	   header address. We also use the size to store CHUNK_USED to know if the chunk is used or not.
 	*/
 
+//	printf("REQUEST CHUNK OF SIZE %lu IN BIN %p, BIN FREE SIZE = %lu\n", size + 16, bin, bin->free_size);
+
 	size += sizeof(t_chunk);
 	bin->free_size -= size;
 
@@ -159,7 +161,7 @@ find_chunk (t_arena *arena, unsigned long size, int chunk_type) {
 }
 
 void *
-malloc (size_t size) {
+__malloc (size_t size) {
 
 	static pthread_mutex_t	main_arena_mutex = PTHREAD_MUTEX_INITIALIZER,
 							new_arena_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -192,6 +194,7 @@ malloc (size_t size) {
 		if ((val = getenv("M_RELEASE_BIN")) != NULL && val[0] == '1') g_arena_data->env |= M_RELEASE_BIN;
 		if ((val = getenv("M_SHOW_HEXDUMP")) != NULL && val[0] == '1') g_arena_data->env |= M_SHOW_HEXDUMP;
 		if ((val = getenv("M_SHOW_UNALLOCATED")) != NULL && val[0] == '1') g_arena_data->env |= M_SHOW_UNALLOCATED;
+		if ((val = getenv("M_SHOW_DEBUG")) != NULL && val[0] == '1') g_arena_data->env |= M_SHOW_DEBUG;
 
 		t_bin *bin = create_new_bin(&arena_data.arenas[0], size, chunk_type, &main_arena_mutex);
 		if (bin == MAP_FAILED) return NULL;
@@ -274,7 +277,7 @@ malloc (size_t size) {
 }
 
 void *
-realloc (void *ptr, size_t size) {
+__realloc (void *ptr, size_t size) {
 
 	if (ptr == NULL) {
 		return malloc(size);
@@ -305,9 +308,11 @@ realloc (void *ptr, size_t size) {
 	if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)
 		&& __mchunk_size(chunk) + __mchunk_size(next_chunk) >= req_size) {
 
+		bin->free_size += __mchunk_size(chunk);
 		unsigned long realloc_size = __mchunk_size(chunk) + __mchunk_size(next_chunk);
 		unsigned long old_size = __mchunk_size(next_chunk);
 		chunk->size = req_size | (1UL << CHUNK_USED);
+		bin->free_size -= __mchunk_size(chunk);
 		memset(next_chunk, 0, sizeof(t_chunk));
 		next_chunk = __mchunk_next(chunk);
 
@@ -329,7 +334,7 @@ realloc (void *ptr, size_t size) {
 }
 
 void *
-calloc (size_t nmemb, size_t size) {
+__calloc (size_t nmemb, size_t size) {
 
-	return malloc(nmemb * size);
+	return __malloc(nmemb * size);
 }

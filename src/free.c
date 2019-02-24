@@ -78,7 +78,7 @@ remove_chunk (t_bin *bin, t_chunk *chunk, t_chunk *previous) {
 	if (bin->free_size + sizeof(t_bin) == __mbin_size(bin)) {
 
 		t_bin *main_bin = __mbin_get_main(bin->arena, __mbin_get_chunk_type(bin));
-		if ((g_arena_data->env & M_RELEASE_BIN) != 0 && main_bin != bin) {
+		if ((g_arena_data->env & M_RELEASE_BIN) && main_bin != bin) {
 
 			bin->prev->next = bin->next;
 			if (bin->next != NULL) bin->next->prev = bin->prev;
@@ -118,7 +118,7 @@ remove_chunk (t_bin *bin, t_chunk *chunk, t_chunk *previous) {
 }
 
 void
-free (void *ptr) {
+__free (void *ptr) {
 
 	if (ptr == NULL) return;
 
