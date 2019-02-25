@@ -85,22 +85,20 @@ hexdump_chunk (t_chunk *chunk, char *buffer, size_t *offset) {
 }
 
 static void
-explore_bin (t_arena *arena, int chunk_type, char *buffer, size_t *offset, size_t *arena_total) {
+explore_bins (t_bin *bins[], size_t bin_num, char *buffer, size_t *offset, size_t *arena_total) {
 
-	t_bin *bin = __mbin_get_main(arena, chunk_type);
-	while (bin != NULL) {
-
-		if (chunk_type == CHUNK_LARGE) {
-			buff_string("\x1b[36mLARGE : ", buffer, offset);
-		} else if (chunk_type == CHUNK_TINY) {
-			buff_string("\x1b[36mTINY : ", buffer, offset);
-		} else if (chunk_type == CHUNK_SMALL) {
+	for (size_t k = 0; k < bin_num; k++) {
+		t_bin *bin = bins[k];
+		if (__mbin_type_is(bin, CHUNK_TINY)) {
+			buff_string("\x1b[36mTINY :  ", buffer, offset);
+		} else if (__mbin_type_is(bin, CHUNK_SMALL)) {
 			buff_string("\x1b[36mSMALL : ", buffer, offset);
+		} else {
+			buff_string("\x1b[36mLARGE : ", buffer, offset);
 		}
 
 		buff_number(18, (unsigned long)bin, buffer, offset);
 		buff_string("\x1b[0m", buffer, offset);
-
 		if (g_arena_data->env & M_SHOW_DEBUG) {
 			buff_string(" [size = ", buffer, offset);
 			buff_number(10, __mbin_size(bin), buffer, offset);
@@ -110,7 +108,6 @@ explore_bin (t_arena *arena, int chunk_type, char *buffer, size_t *offset, size_
 			buff_number(10, bin->max_chunk_size, buffer, offset);
 			buffer[(*offset)++] = ']';
 		}
-
 		buffer[(*offset)++] = '\n';
 
 		t_chunk *chunk = bin->chunk;
@@ -141,7 +138,6 @@ explore_bin (t_arena *arena, int chunk_type, char *buffer, size_t *offset, size_
 			}
 			chunk = __mchunk_next(chunk);
 		}
-		bin = bin->next;
 	}
 }
 
@@ -156,6 +152,7 @@ show_alloc_mem (void) {
 
 	for (int k = 0; k < g_arena_data->arena_count; k++) {
 		t_arena *arena = &g_arena_data->arenas[k];
+		pthread_mutex_lock(&arena->mutex);
 		size_t arena_total = 0;
 
 		if (k != 0) buffer[offset++] = '\n';
@@ -166,20 +163,52 @@ show_alloc_mem (void) {
 		buff_number(10, (unsigned int)(k + 1), buffer, &offset);
 		buff_string(")\x1b[0m\n", buffer, &offset);
 
-		explore_bin(arena, CHUNK_TINY, buffer, &offset, &arena_total);
-		explore_bin(arena, CHUNK_SMALL, buffer, &offset, &arena_total);
-		explore_bin(arena, CHUNK_LARGE, buffer, &offset, &arena_total);
+		size_t bin_num = 0;
+		for (int p = 0; p < 3; p++) {
+			t_bin *bin = (p == 0) ? arena->tiny : (p == 1) ? arena->small : arena->large;
+			while (bin != NULL) {
+				bin_num += 1;
+				bin = bin->next;
+			}
+		}
 
+		t_bin **bins = (t_bin **)calloc(bin_num, sizeof(t_bin *));
+		if (bins == NULL) {
+			buff_string("show_alloc_mem: error allocating\n", buffer, &offset);
+			flush_buffer(buffer, &offset);
+			abort();
+		}
+
+		size_t index = 0;
+		for (int p = 0; p < 3; p++) {
+			t_bin *bin = (p == 0) ? arena->tiny : (p == 1) ? arena->small : arena->large;
+			while (bin != NULL) {
+				size_t q = 0;
+				while (q < index) {
+					if (bins[q] > bin) {
+						for (size_t r = index; r > q; r--) {
+							bins[r] = bins[r - 1];
+						}
+						break;
+					}
+					q += 1;
+				}
+				bins[q] = bin;
+				index += 1;
+				bin = bin->next;
+			}
+		}
+
+		explore_bins(bins, bin_num, buffer, &offset, &arena_total);
 		buff_string("\x1b[33mTotal (arena): \x1b[0m", buffer, &offset);
 		buff_number(10, arena_total, buffer, &offset);
 		buff_string(" bytes\n", buffer, &offset);
-
 		grand_total += arena_total;
+		pthread_mutex_unlock(&arena->mutex);
 	}
 
 	buff_string("\n\x1b[1;31mTotal (all): \x1b[0m", buffer, &offset);
 	buff_number(10, grand_total, buffer, &offset);
 	buff_string(" bytes\n", buffer, &offset);
-
 	flush_buffer(buffer, &offset);
 };

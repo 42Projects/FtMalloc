@@ -328,6 +328,7 @@ realloc (void *ptr, size_t size) {
 	void *user_area = find_chunk(arena, size, chunk_type, 0);
 	memcpy(user_area, chunk->user_area, __mchunk_size(chunk) - sizeof(t_chunk));
 	remove_chunk(bin, chunk);
+
 	pthread_mutex_unlock(&arena->mutex);
 	return user_area;
 }
