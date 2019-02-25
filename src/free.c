@@ -74,15 +74,15 @@ remove_chunk (t_bin *bin, t_chunk *chunk) {
 	bin->free_size += chunk->size;
 
 	/* If the bin is empty, clean it */
-	if (bin->free_size + sizeof(t_bin) == __mbin_size(bin)) {
+	if (bin->free_size + sizeof(t_bin) == bin->size) {
 
-		t_bin *main_bin = __mbin_get_main(bin->arena, __mbin_get_chunk_type(bin));
+		t_bin *main_bin = __mbin_get_main(bin->arena, bin->type);
 		if ((__builtin_expect(g_arena_data->env & M_RELEASE_BIN, 0)) && main_bin != bin) {
 
 			bin->prev->next = bin->next;
 			if (bin->next != NULL) bin->next->prev = bin->prev;
 
-			munmap(bin, __mbin_size(bin));
+			munmap(bin, bin->size);
 			return;
 
 		} else {
@@ -91,7 +91,7 @@ remove_chunk (t_bin *bin, t_chunk *chunk) {
 			chunk->used = 0;
 			bin->max_chunk_size = chunk->size;
 
-			if (__mbin_type_not(bin, CHUNK_LARGE)) __marena_update_max_chunks(bin, 0);
+			if (bin->type != CHUNK_LARGE) __marena_update_max_chunks(bin, 0);
 		}
 
 	} else {

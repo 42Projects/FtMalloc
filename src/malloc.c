@@ -24,7 +24,7 @@ ft_memset (void *b, int c, size_t len) {
 static void
 update_max_chunk (t_bin *bin, t_chunk *next_chunk, unsigned long old_size) {
 
-	unsigned long req_size = __mbin_type_is(bin, CHUNK_TINY) ? SIZE_TINY : SIZE_SMALL;
+	unsigned long req_size = bin->type == CHUNK_TINY ? SIZE_TINY : SIZE_SMALL;
 	if (next_chunk != __mbin_end(bin) && next_chunk->used == 0 && next_chunk->size >= req_size) {
 		bin->max_chunk_size = next_chunk->size;
 	} else {
@@ -45,7 +45,7 @@ update_max_chunk (t_bin *bin, t_chunk *next_chunk, unsigned long old_size) {
 }
 
 static t_bin *
-create_new_bin (t_arena *arena, unsigned long size, int chunk_type, pthread_mutex_t *mutex) {
+create_new_bin (t_arena *arena, unsigned long size, unsigned long chunk_type, pthread_mutex_t *mutex) {
 
 	static unsigned long	headers_size = sizeof(t_bin) + sizeof(t_chunk);
 
@@ -72,7 +72,8 @@ create_new_bin (t_arena *arena, unsigned long size, int chunk_type, pthread_mute
 	}
 
 	/* Keep track of the size and free size available. */
-	bin->size = mmap_size | (1UL << chunk_type);
+	bin->size = mmap_size;
+	bin->type = chunk_type;
 	bin->free_size = mmap_size - sizeof(t_bin);
 	bin->arena = arena;
 	bin->max_chunk_size = bin->free_size;
@@ -116,7 +117,7 @@ create_user_area (t_bin *bin, t_chunk *chunk, size_t size, int zero_set) {
 }
 
 static void *
-find_chunk (t_arena *arena, unsigned long size, int chunk_type, int zero_set) {
+find_chunk (t_arena *arena, unsigned long size, unsigned long chunk_type, int zero_set) {
 
 	t_bin *bin = (chunk_type == CHUNK_LARGE) ? arena->large : NULL;
 	unsigned long required_size = size + sizeof(t_chunk);
@@ -191,8 +192,8 @@ __malloc (size_t size, int zero_set) {
 	/* Round the requested size to nearest 16 bytes. Allows us to always return aligned memory. */
 	size = (size + 0xfUL) & ~0xfUL;
 
-	int chunk_type;
-	if (size >= (1UL << SIZE_THRESHOLD)) {
+	unsigned long chunk_type;
+	if (size > SIZE_THRESHOLD) {
 		return NULL;
 	} else if (size > SIZE_SMALL) {
 		chunk_type = CHUNK_LARGE;
@@ -304,7 +305,7 @@ realloc (void *ptr, size_t size) {
 		return malloc(size);
 	} else {
 		if (size == 0) free(ptr);
-		if (size == 0 || size >= (1UL << SIZE_THRESHOLD)) return NULL;
+		if (size == 0 || size > SIZE_THRESHOLD) return NULL;
 	}
 
 	t_chunk *chunk = (t_chunk *)ptr - 1;
@@ -331,7 +332,7 @@ realloc (void *ptr, size_t size) {
 		unsigned long realloc_size = chunk->size + old_size;
 		bin->free_size -= req_size - chunk->size;
 		chunk->size = req_size;
-		chunk->used = 0;
+		chunk->used = 1;
 
 		next_chunk = __mchunk_next(chunk);
 		if (next_chunk != __mbin_end(bin) && req_size != realloc_size) {
@@ -347,7 +348,7 @@ realloc (void *ptr, size_t size) {
 
 	/* Otherwise, we have to find a new chunk, copy the content to it and free the current chunk. */
 	size = req_size - sizeof(t_chunk);
-	int chunk_type = (size > SIZE_SMALL) ? CHUNK_LARGE : (size <= SIZE_TINY) ? CHUNK_TINY : CHUNK_SMALL;
+	unsigned long chunk_type = (size > SIZE_SMALL) ? CHUNK_LARGE : (size <= SIZE_TINY) ? CHUNK_TINY : CHUNK_SMALL;
 	void *user_area = find_chunk(arena, size, chunk_type, 0);
 	ft_memcpy(user_area, chunk->user_area, chunk->size - sizeof(t_chunk));
 	remove_chunk(bin, chunk);

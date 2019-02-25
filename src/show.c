@@ -89,9 +89,9 @@ explore_bins (t_bin *bins[], size_t bin_num, char *buffer, size_t *offset, size_
 
 	for (size_t k = 0; k < bin_num; k++) {
 		t_bin *bin = bins[k];
-		if (__mbin_type_is(bin, CHUNK_TINY)) {
+		if (bin->type == CHUNK_TINY) {
 			buff_string("\x1b[36mTINY :  ", buffer, offset);
-		} else if (__mbin_type_is(bin, CHUNK_SMALL)) {
+		} else if (bin->type == CHUNK_SMALL) {
 			buff_string("\x1b[36mSMALL : ", buffer, offset);
 		} else {
 			buff_string("\x1b[36mLARGE : ", buffer, offset);
@@ -101,7 +101,7 @@ explore_bins (t_bin *bins[], size_t bin_num, char *buffer, size_t *offset, size_
 		buff_string("\x1b[0m", buffer, offset);
 		if (g_arena_data->env & M_SHOW_DEBUG) {
 			buff_string(" [size = ", buffer, offset);
-			buff_number(10, __mbin_size(bin), buffer, offset);
+			buff_number(10, bin->size, buffer, offset);
 			buff_string("], [free size = ", buffer, offset);
 			buff_number(10, bin->free_size, buffer, offset);
 			buff_string("], [max chunk size = ", buffer, offset);
