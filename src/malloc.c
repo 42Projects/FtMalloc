@@ -25,15 +25,15 @@ static void
 update_max_chunk (t_bin *bin, t_chunk *next_chunk, unsigned long old_size) {
 
 	unsigned long req_size = __mbin_type_is(bin, CHUNK_TINY) ? SIZE_TINY : SIZE_SMALL;
-	if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk) && __mchunk_size(next_chunk) >= req_size) {
-		bin->max_chunk_size = __mchunk_size(next_chunk);
+	if (next_chunk != __mbin_end(bin) && next_chunk->used == 0 && next_chunk->size >= req_size) {
+		bin->max_chunk_size = next_chunk->size;
 	} else {
 		t_chunk *biggest_chunk = bin->chunk;
 		unsigned long remaining = 0;
 		while (biggest_chunk != __mbin_end(bin)) {
-			if (__mchunk_not_used(biggest_chunk)) {
+			if (biggest_chunk->used == 0) {
 
-				if (__mchunk_size(biggest_chunk) > remaining) remaining = __mchunk_size(biggest_chunk);
+				if (biggest_chunk->size > remaining) remaining = biggest_chunk->size;
 				if (remaining >= req_size) break;
 
 			}
@@ -95,8 +95,9 @@ create_user_area (t_bin *bin, t_chunk *chunk, size_t size, int zero_set) {
 	size += sizeof(t_chunk);
 	bin->free_size -= size;
 
-	unsigned long old_size = __mchunk_size(chunk);
-	chunk->size = size | (1UL << CHUNK_USED);
+	unsigned long old_size = chunk->size;
+	chunk->size = size;
+	chunk->used = 1;
 	t_chunk *next_chunk = __mchunk_next(chunk);
 
 	if (next_chunk != __mbin_end(bin) && old_size != size) {
@@ -108,7 +109,7 @@ create_user_area (t_bin *bin, t_chunk *chunk, size_t size, int zero_set) {
 	if (zero_set) {
 		ft_memset(chunk->user_area, 0, size - sizeof(t_chunk));
 	} else if (__builtin_expect(g_arena_data->env & M_SCRIBBLE, 0)) {
-		ft_memset(chunk->user_area, 0xAA, __mchunk_size(chunk) - sizeof(t_chunk));
+		ft_memset(chunk->user_area, 0xAA, chunk->size - sizeof(t_chunk));
 	}
 
 	return chunk->user_area;
@@ -172,7 +173,7 @@ find_chunk (t_arena *arena, unsigned long size, int chunk_type, int zero_set) {
 	*/
 
 	t_chunk *chunk = bin->chunk;
-	while (__mchunk_is_used(chunk) || __mchunk_size(chunk) < required_size) {
+	while (chunk->used || chunk->size < required_size) {
 		chunk = __mchunk_next(chunk);
 	}
 
@@ -317,7 +318,7 @@ realloc (void *ptr, size_t size) {
 		return NULL;
 	}
 
-	if (__mchunk_size(chunk) - sizeof(t_chunk) >= size) return ptr;
+	if (chunk->size - sizeof(t_chunk) >= size) return ptr;
 
 	unsigned long req_size = ((size + 0xfUL) & ~0xfUL) + sizeof(t_chunk);
 	t_arena *arena = bin->arena;
@@ -325,12 +326,12 @@ realloc (void *ptr, size_t size) {
 	t_chunk *next_chunk = __mchunk_next(chunk);
 
 	/* If next chunk is available and the cumulative size is enough, extend the current chunk. */
-	if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)
-		&& __mchunk_size(chunk) + __mchunk_size(next_chunk) >= req_size) {
-		unsigned long old_size = __mchunk_size(next_chunk);
-		unsigned long realloc_size = __mchunk_size(chunk) + old_size;
-		bin->free_size -= req_size - __mchunk_size(chunk);
-		chunk->size = req_size | (1UL << CHUNK_USED);
+	if (next_chunk != __mbin_end(bin) && next_chunk->used == 0 && chunk->size + next_chunk->size >= req_size) {
+		unsigned long old_size = next_chunk->size;
+		unsigned long realloc_size = chunk->size + old_size;
+		bin->free_size -= req_size - chunk->size;
+		chunk->size = req_size;
+		chunk->used = 0;
 
 		next_chunk = __mchunk_next(chunk);
 		if (next_chunk != __mbin_end(bin) && req_size != realloc_size) {
@@ -348,7 +349,7 @@ realloc (void *ptr, size_t size) {
 	size = req_size - sizeof(t_chunk);
 	int chunk_type = (size > SIZE_SMALL) ? CHUNK_LARGE : (size <= SIZE_TINY) ? CHUNK_TINY : CHUNK_SMALL;
 	void *user_area = find_chunk(arena, size, chunk_type, 0);
-	ft_memcpy(user_area, chunk->user_area, __mchunk_size(chunk) - sizeof(t_chunk));
+	ft_memcpy(user_area, chunk->user_area, chunk->size - sizeof(t_chunk));
 	remove_chunk(bin, chunk);
 
 	pthread_mutex_unlock(&arena->mutex);

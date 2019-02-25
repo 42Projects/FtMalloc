@@ -112,10 +112,10 @@ explore_bins (t_bin *bins[], size_t bin_num, char *buffer, size_t *offset, size_
 
 		t_chunk *chunk = bin->chunk;
 		while (chunk != __mbin_end(bin)) {
-			if (__mchunk_is_used(chunk) || g_arena_data->env & M_SHOW_UNALLOCATED) {
-				size_t chunk_size = __mchunk_size(chunk) - sizeof(t_chunk);
+			if (chunk->used || g_arena_data->env & M_SHOW_UNALLOCATED) {
+				size_t chunk_size = chunk->size - sizeof(t_chunk);
 
-				if ((__mchunk_not_used(chunk) && g_arena_data->env & M_SHOW_UNALLOCATED)
+				if ((chunk->used == 0 && g_arena_data->env & M_SHOW_UNALLOCATED)
 					|| (g_arena_data->env & M_SHOW_HEXDUMP) == 0) {
 					buff_number(18, (unsigned long)chunk->user_area, buffer, offset);
 					buff_string(" - ", buffer, offset);
@@ -124,12 +124,12 @@ explore_bins (t_bin *bins[], size_t bin_num, char *buffer, size_t *offset, size_
 					buff_number(10, chunk_size, buffer, offset);
 					buff_string(" bytes", buffer, offset);
 
-					if (__mchunk_not_used(chunk)) buff_string(" \x1b[92m(UNALLOCATED)\x1b[0m", buffer, offset);
+					if (chunk->used == 0) buff_string(" \x1b[92m(UNALLOCATED)\x1b[0m", buffer, offset);
 
 					buffer[(*offset)++] = '\n';
 				}
 
-				if (__mchunk_is_used(chunk)) {
+				if (chunk->used) {
 
 					if (g_arena_data->env & M_SHOW_HEXDUMP) hexdump_chunk(chunk, buffer, offset);
 

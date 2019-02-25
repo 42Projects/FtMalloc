@@ -3,9 +3,9 @@ export DYLD_LIBRARY_PATH=.
 export DYLD_INSERT_LIBRARIES="libft_malloc.so"
 export DYLD_FORCE_FLAT_NAMESPACE=1
 export M_ABORT_ON_ERROR=0
-export M_RELEASE_BIN=1
-export M_SCRIBBLE=1
-export M_SHOW_DEBUG=1
-export M_SHOW_HEXDUMP=1
-export M_SHOW_UNALLOCATED=1
+export M_RELEASE_BIN=0
+export M_SCRIBBLE=0
+export M_SHOW_DEBUG=0
+export M_SHOW_HEXDUMP=0
+export M_SHOW_UNALLOCATED=0
 $@

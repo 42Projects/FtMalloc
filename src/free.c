@@ -23,7 +23,7 @@ test_bin (t_bin *bin, t_chunk *chunk, t_bin **lock_bin) {
 		if ((size_t)chunk > (size_t)bin && (size_t)chunk < (size_t)__mbin_end(bin)) {
 			*lock_bin = bin;
 
-			if (__mchunk_not_used(chunk)) return 2;
+			if (chunk->used == 0) return 2;
 
 			return test_chunk(bin, chunk);
 		}
@@ -71,7 +71,7 @@ void
 remove_chunk (t_bin *bin, t_chunk *chunk) {
 
 	/* Return memory chunk to the bin and update bin free size. */
-	bin->free_size += __mchunk_size(chunk);
+	bin->free_size += chunk->size;
 
 	/* If the bin is empty, clean it */
 	if (bin->free_size + sizeof(t_bin) == __mbin_size(bin)) {
@@ -88,17 +88,18 @@ remove_chunk (t_bin *bin, t_chunk *chunk) {
 		} else {
 			chunk = bin->chunk;
 			chunk->size = bin->free_size;
+			chunk->used = 0;
 			bin->max_chunk_size = chunk->size;
 
 			if (__mbin_type_not(bin, CHUNK_LARGE)) __marena_update_max_chunks(bin, 0);
 		}
 
 	} else {
-		chunk->size &= ~(1UL << CHUNK_USED);
+		chunk->used = 0;
 
 		/* Defragment. */
 		t_chunk *next_chunk = __mchunk_next(chunk);
-		if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)) chunk->size += next_chunk->size;
+		if (next_chunk != __mbin_end(bin) && next_chunk->used == 0) chunk->size += next_chunk->size;
 
 		next_chunk = __mchunk_next(chunk);
 		if (next_chunk != __mbin_end(bin)) next_chunk->prev = chunk;

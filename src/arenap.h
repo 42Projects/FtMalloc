@@ -20,7 +20,7 @@
 # define SIZE_MASK ((1UL << (SIZE_THRESHOLD + 1)) - 1)
 
 enum				e_type {
-	CHUNK_USED = SIZE_THRESHOLD + 1,
+	CHUNK_CACA = SIZE_THRESHOLD + 1,
 	CHUNK_TINY,
 	CHUNK_SMALL,
 	CHUNK_LARGE
@@ -53,13 +53,11 @@ enum 				e_env {
 # define __mbin_size(bin) (bin->size & SIZE_MASK)
 # define __mbin_type_is(bin, chunk_type) (bin->size & (1UL << chunk_type))
 # define __mbin_type_not(bin, chunk_type) (__mbin_type_is(bin, chunk_type) == 0)
-# define __mchunk_is_used(chunk) (chunk->size & (1UL << CHUNK_USED))
-# define __mchunk_next(chunk) ((t_chunk *)((unsigned long)chunk + __mchunk_size(chunk)))
-# define __mchunk_not_used(chunk) (__mchunk_is_used(chunk) == 0)
-# define __mchunk_size(chunk) (chunk->size & SIZE_MASK)
+# define __mchunk_next(chunk) ((t_chunk *)((unsigned long)chunk + chunk->size))
 
 typedef struct		s_chunk {
-	unsigned long	size;
+	unsigned long	size: 63;
+	unsigned long	used: 1;
 	struct s_chunk	*prev;
 	void			*user_area[];
 }					__attribute__((packed)) t_chunk;
