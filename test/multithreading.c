@@ -127,7 +127,7 @@ main (void) {
 		pthread_join(th2[k], NULL);
 	}
 
-	show_alloc_mem();
+//	show_alloc_mem();
 
 	return 0;
 }

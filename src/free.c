@@ -96,13 +96,18 @@ remove_chunk (t_bin *bin, t_chunk *chunk) {
 	} else {
 		chunk->size &= ~(1UL << CHUNK_USED);
 
-		t_chunk *next_chunk = __mchunk_next(chunk);
-		if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)) {
-			chunk->size += next_chunk->size;
-			next_chunk = __mchunk_next(chunk);
-
-			if (next_chunk != __mbin_end(bin)) next_chunk->prev = chunk;
+		/* Defragment. */
+/*		t_chunk *prev_chunk = chunk->prev;
+		if (prev_chunk && __mchunk_not_used(prev_chunk)) {
+			prev_chunk->size += chunk->size;
+			chunk = chunk->prev;
 		}
+*/
+		t_chunk *next_chunk = __mchunk_next(chunk);
+		if (next_chunk != __mbin_end(bin) && __mchunk_not_used(next_chunk)) chunk->size += next_chunk->size;
+
+		next_chunk = __mchunk_next(chunk);
+		if (next_chunk != __mbin_end(bin)) next_chunk->prev = chunk;
 
 		if (chunk->size > bin->max_chunk_size) {
 			bin->max_chunk_size = chunk->size;

@@ -73,7 +73,7 @@ hexdump_chunk (t_chunk *chunk, char *buffer, size_t *offset) {
 
 		for (int k = 0; k < 16; k++) {
 			char c = ((char *)ptr)[k];
-			buffer[(*offset)++] = (c > 31 && c < 127) ? c : ' ';
+			buffer[(*offset)++] = (c > 31 && c < 127) ? c : (char)32;
 		}
 
 		buff_string("|\n", buffer, offset);
@@ -154,7 +154,7 @@ show_alloc_mem (void) {
 
 	if (g_arena_data == NULL) return;
 
-	for (unsigned int k = 0; k < g_arena_data->arena_count; k++) {
+	for (int k = 0; k < g_arena_data->arena_count; k++) {
 		t_arena *arena = &g_arena_data->arenas[k];
 		size_t arena_total = 0;
 
@@ -163,7 +163,7 @@ show_alloc_mem (void) {
 		buff_string("\x1b[33mARENA AT ", buffer, &offset);
 		buff_number(18, (unsigned long)arena, buffer, &offset);
 		buff_string(" (", buffer, &offset);
-		buff_number(10, k + 1, buffer, &offset);
+		buff_number(10, (unsigned int)(k + 1), buffer, &offset);
 		buff_string(")\x1b[0m\n", buffer, &offset);
 
 		explore_bin(arena, CHUNK_TINY, buffer, &offset, &arena_total);
