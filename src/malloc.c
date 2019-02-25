@@ -4,6 +4,23 @@
 
 t_arena_data	*g_arena_data = NULL;
 
+static void *
+ft_memcpy (void *dst, void *src, size_t n) {
+
+	for (size_t k = 0; k < n; k++) {
+		((unsigned char *)dst)[k] = ((unsigned char *)src)[k];
+	}
+	return dst;
+}
+
+void
+ft_memset (void *b, int c, size_t len) {
+
+	for (size_t k = 0; k < len; k++) {
+		((unsigned char *)b)[k] = (unsigned char)c;
+	}
+}
+
 static void
 update_max_chunk (t_bin *bin, t_chunk *next_chunk, unsigned long old_size) {
 
@@ -88,7 +105,11 @@ create_user_area (t_bin *bin, t_chunk *chunk, size_t size, int zero_set) {
 	}
 
 	if (old_size == bin->max_chunk_size) update_max_chunk(bin, next_chunk, old_size);
-	if (zero_set) memset(chunk->user_area, 0, size - sizeof(t_chunk));
+	if (zero_set) {
+		ft_memset(chunk->user_area, 0, size - sizeof(t_chunk));
+	} else if (__builtin_expect(g_arena_data->env & M_SCRIBBLE, 0)) {
+		ft_memset(chunk->user_area, 0xAA, __mchunk_size(chunk) - sizeof(t_chunk));
+	}
 
 	return chunk->user_area;
 }
@@ -190,6 +211,7 @@ __malloc (size_t size, int zero_set) {
 		char *val = NULL;
 		if ((val = getenv("M_ABORT_ON_ERROR")) != NULL && val[0] == '1') g_arena_data->env |= M_ABORT_ON_ERROR;
 		if ((val = getenv("M_RELEASE_BIN")) != NULL && val[0] == '1') g_arena_data->env |= M_RELEASE_BIN;
+		if ((val = getenv("M_SCRIBBLE")) != NULL && val[0] == '1') g_arena_data->env |= M_SCRIBBLE;
 		if ((val = getenv("M_SHOW_HEXDUMP")) != NULL && val[0] == '1') g_arena_data->env |= M_SHOW_HEXDUMP;
 		if ((val = getenv("M_SHOW_UNALLOCATED")) != NULL && val[0] == '1') g_arena_data->env |= M_SHOW_UNALLOCATED;
 		if ((val = getenv("M_SHOW_DEBUG")) != NULL && val[0] == '1') g_arena_data->env |= M_SHOW_DEBUG;
@@ -326,7 +348,7 @@ realloc (void *ptr, size_t size) {
 	size = req_size - sizeof(t_chunk);
 	int chunk_type = (size > SIZE_SMALL) ? CHUNK_LARGE : (size <= SIZE_TINY) ? CHUNK_TINY : CHUNK_SMALL;
 	void *user_area = find_chunk(arena, size, chunk_type, 0);
-	memcpy(user_area, chunk->user_area, __mchunk_size(chunk) - sizeof(t_chunk));
+	ft_memcpy(user_area, chunk->user_area, __mchunk_size(chunk) - sizeof(t_chunk));
 	remove_chunk(bin, chunk);
 
 	pthread_mutex_unlock(&arena->mutex);

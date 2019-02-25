@@ -77,7 +77,7 @@ remove_chunk (t_bin *bin, t_chunk *chunk) {
 	if (bin->free_size + sizeof(t_bin) == __mbin_size(bin)) {
 
 		t_bin *main_bin = __mbin_get_main(bin->arena, __mbin_get_chunk_type(bin));
-		if ((g_arena_data->env & M_RELEASE_BIN) && main_bin != bin) {
+		if ((__builtin_expect(g_arena_data->env & M_RELEASE_BIN, 0)) && main_bin != bin) {
 
 			bin->prev->next = bin->next;
 			if (bin->next != NULL) bin->next->prev = bin->prev;
@@ -107,6 +107,10 @@ remove_chunk (t_bin *bin, t_chunk *chunk) {
 			bin->max_chunk_size = chunk->size;
 			__marena_update_max_chunks(bin, 0);
 		}
+	}
+
+	if (__builtin_expect(g_arena_data->env & M_SCRIBBLE, 0)) {
+		ft_memset(chunk->user_area, 0x55, chunk->size - sizeof(t_chunk));
 	}
 }
 

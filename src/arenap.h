@@ -29,9 +29,10 @@ enum				e_type {
 enum 				e_env {
 	M_ABORT_ON_ERROR = 1,
 	M_RELEASE_BIN = 2,
-	M_SHOW_HEXDUMP = 4,
-	M_SHOW_UNALLOCATED = 8,
-	M_SHOW_DEBUG = 16
+	M_SCRIBBLE = 4,
+	M_SHOW_HEXDUMP = 8,
+	M_SHOW_UNALLOCATED = 16,
+	M_SHOW_DEBUG = 32
 };
 
 # define __marena_update_max_chunks(bin, old_size)													\
@@ -91,6 +92,7 @@ typedef struct 		s_arena_data {
 
 extern t_arena_data	*g_arena_data;
 
+void				ft_memset(void *b, int c, size_t len);
 void				remove_chunk(t_bin *bin, t_chunk *chunk);
 int 				test_valid_chunk(t_chunk *chunk, t_bin **bin);
 
