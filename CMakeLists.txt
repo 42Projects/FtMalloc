@@ -13,6 +13,7 @@ add_executable(ft_malloc
         src/free.c
         src/malloc.c
         src/show.c
+        src/utils.c
         src/showp.h
         src/arenap.h
         test/test0.c

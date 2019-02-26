@@ -17,7 +17,7 @@ SYMLINK :=				libft_malloc.so
 CC :=					gcc
 
 #	Flags
-FLAGS =					-g3 -Wall -Wextra -Wcast-align -Wconversion -Werror 
+FLAGS =					-Wall -Wextra -Wcast-align -Wconversion -Werror 
 ifeq ($(OS), Darwin)
 	THREADS :=			$(shell sysctl -n hw.ncpu)
 else
@@ -27,13 +27,13 @@ endif
 FAST :=					-j$(THREADS)
 DYN_FLAG :=				-shared
 HEADERS :=				-I ./include/
-O_FLAG :=				-O0
+O_FLAG :=				-O3
 
 #	Directories
 OBJDIR :=				./build/
 SRC_DIR :=				./src/
 
-SRC +=					free.c malloc.c show.c
+SRC +=					free.c malloc.c show.c utils.c
 
 #	Sources
 OBJECTS =				$(patsubst %.c,$(OBJDIR)%.o,$(SRCS))

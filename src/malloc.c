@@ -13,14 +13,6 @@ ft_memcpy (void *dst, void *src, size_t n) {
 	return dst;
 }
 
-void
-ft_memset (void *b, int c, size_t len) {
-
-	for (size_t k = 0; k < len; k++) {
-		((unsigned char *)b)[k] = (unsigned char)c;
-	}
-}
-
 static void
 update_max_chunk (t_bin *bin, t_chunk *next_chunk, unsigned long old_size) {
 
