@@ -296,8 +296,16 @@ realloc (void *ptr, size_t size) {
 	if (ptr == NULL) {
 		return malloc(size);
 	} else {
-		if (size == 0) free(ptr);
-		if (size == 0 || size > SIZE_THRESHOLD) return NULL;
+		
+		if (size == 0) {
+		
+			free(ptr);
+			return __malloc(0, 0);
+		} else if (size > SIZE_THRESHOLD) {
+
+			free(ptr);
+			return NULL;
+		}
 	}
 
 	t_chunk *chunk = (t_chunk *)ptr - 1;
