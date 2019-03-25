@@ -33,7 +33,20 @@ O_FLAG :=				-O3
 OBJDIR :=				./build/
 SRC_DIR :=				./src/
 
-SRC +=					free.c malloc.c show.c utils.c
+SRC +=					arena_update_max_chunks.c \
+						bin_get_main.c \
+						buff_show.c \
+						create_new.c \
+						free.c \
+						hexdump_chunk.c \
+						malloc.c \
+						malloc_chunk_tools.c \
+						malloc_cut.c \
+						realloc.c \
+						show.c \
+						show_step.c \
+						test_valid_chunk.c \
+						utils.c
 
 #	Sources
 OBJECTS =				$(patsubst %.c,$(OBJDIR)%.o,$(SRCS))
